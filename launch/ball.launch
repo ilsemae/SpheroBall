@@ -1,0 +1,27 @@
+<launch>
+
+	<arg name="sim" default="True" />
+	<param name="simulation" type="boolean" value="$(arg sim)" />
+
+	<arg name="n" default="2" />
+	<param name="total_robot_n" type="int" value="$(arg n)" />
+
+	<node pkg="sphero_ball" name="spheros_connector" type="robot_setup.py" output="screen" />
+	<param name="setup_complete" type="boolean" value="False" />
+
+
+	<!-- launch leader robots and navigate them -->
+	<node pkg="sphero_ball" name="sphero1_driver" type="leader_driver.py" output="screen" args="1" />
+	<!--<node pkg="sphero_ball" name="chris_driver" type="leader_driver.py" output="screen" args="3" />
+	<node pkg="sphero_ball" name="lindsey_driver" type="leader_driver.py" output="screen" args="4" />-->
+
+
+	<!-- launch follower robots and drive them -->
+	<!--<node pkg="sphero_ball" name="sphero2_driver" type="follower_driver.py" output="screen" args="2" />
+	<node pkg="sphero_ball" name="jordan_driver" type="follower_driver.py" output="screen" args="5" />-->
+
+
+	<!-- launch turtlesim - would be nice to do this from robot_setup.py
+	<node pkg="turtlesim" name="turtlesim" type="turtlesim_node"/>  --> 
+
+</launch>
