@@ -25,6 +25,7 @@ def turtle_mommy(baby_name):
 
 	rospy.wait_for_service(baby_name+'/set_pen')
 	try:
+		# turn pen off
 		changepen = rospy.ServiceProxy(baby_name+'/set_pen',SetPen)
 		changepen(0,0,0,1,255)
 	except rospy.ServiceException, e:
@@ -74,7 +75,7 @@ def find_spheros():
 if __name__ == '__main__':
 
 	if rospy.get_param("simulation")==True:
-		#launch a robot in turtlesim
+		#launch robots in turtlesim
 		for baby_number in range(1,rospy.get_param("total_robot_n")+1):
 			turtle_mommy('sphero'+str(baby_number))
 		rospy.set_param("setup_complete",True)
