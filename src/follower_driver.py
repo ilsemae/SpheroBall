@@ -18,6 +18,7 @@ theta = 0
 
 mode = 1 # 1 = waiting to be asked, 2 = following leader to dancefloor, 3 = dancing with partner
 
+# turtle position callback
 def pose_callback(data):
 	global x
 	global y
@@ -26,10 +27,12 @@ def pose_callback(data):
 	y = data.y
 	theta = float(np.mod(data.theta,2*np.pi)) # bring angle value to within +2*pi
 
+# sphero position callback
 def odom_callback(data):
 	#print(data)
 	p=data
 
+# main driving function for followers (turtlesim and sphero)
 def follow(robot_name):
 
 	sim = rospy.get_param("simulation")
@@ -40,12 +43,12 @@ def follow(robot_name):
 	else:
 		rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
 		pub_color = rospy.Publisher(robot_name+'/set_color', ColorRGBA, queue_size=10)
-		color = ColorRGBA(100,0,150,0)
+		color = ColorRGBA(100,0,150,0) # maybe the color can be the "smile" variable
 
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
 
 	rospy.init_node(robot_name+'_driver', anonymous=True)
-	rate = rospy.Rate(1) # hz
+	rate = rospy.Rate(50) # hz
 
 	if sim == True:
 		r_dot = 1
@@ -72,7 +75,7 @@ if __name__ == '__main__':
 
 	try:
 		follow('baby_number')
-		rospy.spin()
+		rospy.spin() # not sure why I put this here. Perhaps it should go inside follow()
 	except rospy.ROSInterruptException:
 		pass
 
