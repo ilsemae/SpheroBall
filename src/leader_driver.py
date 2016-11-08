@@ -18,6 +18,7 @@ theta = 0
 
 mode = 0 # 0 = waiting to dance, 1 = navigating to a partner, 2 = leading partner to dance, 3 = dancing with partner
 
+# turtle position callback
 def pose_callback(data):
 	global x
 	global y
@@ -27,6 +28,7 @@ def pose_callback(data):
 	theta = float(np.mod(data.theta,2*np.pi)) # bring angle value to within +2*pi
 	print(data)
 
+# sphero position callback
 def odom_callback(data):
 	global x
 	global y
@@ -35,6 +37,7 @@ def odom_callback(data):
 	y = data.pose.pose.position.y
 	theta = float(np.mod(data.pose.pose.orientation.w,2*np.pi)) # bring angle value to within +2*pi
 
+# main driving function for leader
 def driver(robot_name):
 
 	global mode
@@ -56,14 +59,14 @@ def driver(robot_name):
 
 	while not rospy.is_shutdown():
 
-		t = time.time()
+		t = time.time() # current time in seconds
 		
 		if sim == True:
 
 			if mode == 0:
 				# wait to go to a partner
-				r_dot = 1
-				theta_dot = 1
+				r_dot = 0
+				theta_dot = 0
 
 			elif mode == 1:
 				# navigate to partner using force model
@@ -88,8 +91,8 @@ def driver(robot_name):
 
 			if mode == 0:
 				# wait to go to a partner
-				x_dot = 30*np.sin(3*t)
-				y_dot = 30*np.cos(3*t)
+				x_dot = 0
+				y_dot = 0
 
 			elif mode == 1:
 				# navigate to partner using force model
@@ -122,7 +125,7 @@ if __name__ == '__main__':
 
 	try:
 		driver('sphero'+str(baby_number))
-		rospy.spin()
+		rospy.spin() # same here. Does it matter if it's in driver() or not? - ilse
 	except rospy.ROSInterruptException:
 		pass
 
