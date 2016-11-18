@@ -19,7 +19,7 @@ def turtle_mommy(baby_name):
 	rospy.wait_for_service('spawn')
 	try:
 		new_robot = rospy.ServiceProxy('spawn',Spawn)
-		resp = new_robot(3,3,0,baby_name)
+		resp = new_robot(5.5,5.5,0,baby_name)
 	except rospy.ServiceException, e:
 		print "%s"%e
 
@@ -73,6 +73,13 @@ def find_spheros():
 	rospy.spin()
 
 if __name__ == '__main__':
+
+	rospy.wait_for_service('kill')
+	try:
+		retire = rospy.ServiceProxy('kill',Kill)
+		resp = retire('turtle1')
+	except rospy.ServiceException, e:
+		print "%s"%e
 
 	if rospy.get_param("simulation")==True:
 		#launch robots in turtlesim

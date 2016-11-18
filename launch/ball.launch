@@ -9,16 +9,23 @@
 	<node pkg="sphero_ball" name="spheros_connector" type="robot_setup.py" output="screen" />
 	<param name="setup_complete" type="boolean" value="False" />
 
+	<node pkg="sphero_ball" name="social_force" type="social_force_service.py" output="screen" />
+	<node pkg="sphero_ball" name="robot_locator" type="robot_location_service.py" output="screen" />
+
 	<!-- launch turtlesim - needs to be manually commented out when running non sim version -->
-	<!-- would be nice to do this from robot_setup.py
-	<node pkg="turtlesim" name="turtlesim" type="turtlesim_node"/>  --> 
+	<!-- would be nice to do this from robot_setup.py --> 
+	<node pkg="turtlesim" name="turtlesim" type="turtlesim_node"/>  
 
 	<!-- leader and follower robots below. make sure only n of them are uncommented when running launch file -->
 
+	<!-- leaders all have odd args -->
 	<node pkg="sphero_ball" name="sphero1_driver" type="leader_driver.py" output="screen" args="1" />
-	<!--<node pkg="sphero_ball" name="chris_driver" type="leader_driver.py" output="screen" args="3" />
-	<node pkg="sphero_ball" name="lindsey_driver" type="leader_driver.py" output="screen" args="4" />
+	<!--<node pkg="sphero_ball" name="sphero3_driver" type="leader_driver.py" output="screen" args="3" />
+	<node pkg="sphero_ball" name="sphero5_driver" type="leader_driver.py" output="screen" args="5" />-->
+
+	<!-- followers all have even args -->
 	<node pkg="sphero_ball" name="sphero2_driver" type="follower_driver.py" output="screen" args="2" />
-	<node pkg="sphero_ball" name="jordan_driver" type="follower_driver.py" output="screen" args="5" />-->
+	<!--<node pkg="sphero_ball" name="sphero4_driver" type="follower_driver.py" output="screen" args="4" />
+	<node pkg="sphero_ball" name="sphero6_driver" type="follower_driver.py" output="screen" args="6" />-->
 
 </launch>
