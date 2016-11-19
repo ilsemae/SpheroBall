@@ -16,7 +16,13 @@ x = 0
 y = 0
 theta = 0
 
-mode = 0 # 0 = waiting to be asked, 1 = waiting to be asked, 2 = following leader to dancefloor, 3 = dancing with partner
+mode = -1 # 0 = waiting to be asked, 1 = waiting to be asked, 2 = following leader to dancefloor, 3 = dancing with partner
+
+# for leaders to ask followers to dance
+def chatter_callback(data):
+	global mode
+	print "Sure, I'll dance with you, "+data.data+"!"
+	mode = 2
 
 # turtle position callback
 def pose_callback(data):
@@ -31,6 +37,25 @@ def pose_callback(data):
 def odom_callback(data):
 	#print(data)
 	p=data
+
+def add_to_mode_counter(i):
+
+	rospy.set_param('mode_checker_'+str(i),1)
+
+def wait_for_next_mode():
+
+	global mode
+	rsum = 0
+	for i in range(1,rospy.get_param('total_robot_n')+1):
+		rsum = rsum + rospy.get_param('mode_checker_'+str(i))
+
+	while rsum < rospy.get_param('total_robot_n') and rospy.get_param('mode') == mode :
+		time.sleep(1)
+
+	mode = mode + 1
+	rospy.set_param('mode',mode)
+	for i in range(1,rospy.get_param('total_robot_n')+1):
+		rospy.set_param('mode_checker_'+str(i),0)
 
 def go_to(robot_name,pose_x,pose_y,angle):
 
@@ -86,13 +111,14 @@ def follow(robot_name):
 
 	rospy.init_node(robot_name+'_driver', anonymous=True)
 	rate = rospy.Rate(350) # hz
+	rospy.Subscriber(robot_name+'/chatter',String,chatter_callback)
 
 	sim = rospy.get_param("simulation")
 
 	if sim == True:
 		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
 		p_x = 10
-		p_y = np.random.randint(3,30)/3
+		p_y = float(np.random.randint(3,30))/3
 		th = np.pi
 
 		global x
@@ -105,31 +131,36 @@ def follow(robot_name):
 		pub_color = rospy.Publisher(robot_name+'/set_color', ColorRGBA, queue_size=10)
 		color = ColorRGBA(100,0,150,0) # maybe the color can be the "smile" variable
 
-	print('ready to be asked to dance!')
+	print(robot_name+': ready to be asked to dance!')
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
+	add_to_mode_counter(int(robot_name.replace('sphero','')))
+	wait_for_next_mode()
+	print(robot_name+": Time for the next mode: "+str(mode))
 
 	while not rospy.is_shutdown():
 
 		if sim == True:
+
 			if mode == 0:
-				# wait to be asked
+				# wait
 				r_dot = 0
 				theta_dot = 0
 
 			elif mode == 1:
-				# wait to be asked
+				# move forward or back depending on how happy you are to dance
 				r_dot = 0
 				theta_dot = 0
 
 			elif mode == 2:
 				# navigate to dance floor using force model
-				r_dot = 1
-				theta_dot = 1
+				# print(robot_name+": You lead the way!")
+				r_dot = 0
+				theta_dot = 0
 
 			else:
 				# dance in a circle with partner and avoid others
-				r_dot = 1
-				theta_dot = 1
+				r_dot = 0
+				theta_dot = 0
 
 			lin = Vector3(r_dot,0,0)
 			ang = Vector3(0,0,theta_dot)

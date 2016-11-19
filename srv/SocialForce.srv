@@ -1,6 +1,7 @@
 string name
 float64 goal_x
 float64 goal_y
+string goal_name
 ---
 float64 x
 float64 y
