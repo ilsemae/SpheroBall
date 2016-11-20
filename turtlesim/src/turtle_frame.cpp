@@ -49,7 +49,7 @@ TurtleFrame::TurtleFrame(QWidget* parent, Qt::WindowFlags f)
 , frame_count_(0)
 , id_counter_(0)
 {
-  setFixedSize(1500, 700);
+  setFixedSize(1100, 700);
   setWindowTitle("Sphero Ball Simulation");
 
   srand(time(NULL));
