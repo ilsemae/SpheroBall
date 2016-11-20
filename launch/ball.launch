@@ -7,7 +7,6 @@
 	<param name="total_robot_n" type="int" value="$(arg n)" />
 
 	<param name="mode" type="int" value="-1" />
-	<param name="mode_counter" type="int" value="0" /> <!-- used to count all the turtles that are in the next mode -->
 
 	<param name="mode_checker_1" type="int" value="0" />
 	<param name="mode_checker_2" type="int" value="0" />

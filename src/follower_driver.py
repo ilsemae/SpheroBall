@@ -10,6 +10,7 @@ from geometry_msgs.msg import Vector3
 from turtlesim.srv import Kill, Spawn, SetPen
 from turtlesim.msg import Pose
 from nav_msgs.msg import Odometry
+from sphero_ball.srv import *
 
 
 x = 0
@@ -21,8 +22,12 @@ mode = -1 # 0 = waiting to be asked, 1 = waiting to be asked, 2 = following lead
 # for leaders to ask followers to dance
 def chatter_callback(data):
 	global mode
-	print "Sure, I'll dance with you, "+data.data+"!"
-	mode = 2
+	if data.data == "bow":
+		print "Thank you as well!"
+		mode = 4
+	else:
+		print "Sure, I'll dance with you, "+data.data+"!"
+		mode = 2
 
 # turtle position callback
 def pose_callback(data):
@@ -49,7 +54,7 @@ def wait_for_next_mode():
 	for i in range(1,rospy.get_param('total_robot_n')+1):
 		rsum = rsum + rospy.get_param('mode_checker_'+str(i))
 
-	while rsum < rospy.get_param('total_robot_n') and rospy.get_param('mode') == mode :
+	while rsum < rospy.get_param('total_robot_n') and rospy.get_param('mode') <= mode :
 		time.sleep(1)
 
 	mode = mode + 1
@@ -76,13 +81,17 @@ def go_to(robot_name,pose_x,pose_y,angle):
 		i = -i
 	ang = Vector3(0,0,.5*i)
 	lin = Vector3(0,0,0)
-	while abs(goal_angle-theta)>.01:
+	# if you are not at your goal x,y, spin until you are facing your goal:
+	while abs(goal_angle-theta)>.01 and np.linalg.norm(direction) > 0.1:
+		#print "spinning to face goal position"
 		stumble = Twist(lin,ang)
 		pub.publish(stumble)
 		rate.sleep()
 	ang = Vector3(0,0,0)
 	lin = Vector3(3,0,0)
-	while np.linalg.norm(goal_pose-current_pose)>.1:
+	# move toward your goal
+	while np.linalg.norm(goal_pose-current_pose) > 0.1 and np.linalg.norm(direction) > 0.1:
+		#print "moving toward goal position"
 		current_pose = np.array([x,y])
 		stumble = Twist(lin,ang)
 		pub.publish(stumble)
@@ -93,7 +102,9 @@ def go_to(robot_name,pose_x,pose_y,angle):
 		i = -i
 	ang = Vector3(0,0,.5*i)
 	lin = Vector3(0,0,0)
+	# spin until you reach your given angle
 	while abs(theta-goal_angle)>.1:
+		#print "now spinning to desired theta"
 		stumble = Twist(lin,ang)
 		pub.publish(stumble)
 		rate.sleep()
@@ -103,11 +114,84 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	pub.publish(stumble)
 	rate.sleep()
 
+def navigate_toward(goal,robot_name,leader_name):
+	global x
+	global y
+	global theta
+	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
+	rospy.wait_for_service('social_force')
+	try:
+		social_force = rospy.ServiceProxy('social_force', SocialForce)
+		resp2 = social_force(robot_name,goal[0],goal[1],leader_name)
+	except rospy.ServiceException, e:
+		print "Service call failed: %s"%e
+
+	net_force = np.array([resp2.x,resp2.y])
+	force_angle = np.arctan2(net_force[1],net_force[0])
+	#print(turtle_name+": Ok! My force angle is "+str(force_angle))
+
+	force_angle = np.mod(force_angle,2*np.pi) # bring angle value to within +2*pi
+	angle_difference = np.mod(force_angle - theta,2*np.pi)
+	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
+
+
+	# if force angle points in front of robot, turn and move forward at the same time
+	if angle_difference < np.pi/2 :
+		if angle_difference < .1:
+			r_dot = 1
+			theta_dot = 0
+		else:
+			r_dot = 1
+			theta_dot = 0.5
+	elif angle_difference > 3*np.pi/2: 
+		if angle_difference > 2*np.pi-.1:
+			r_dot = 1
+			theta_dot = 0
+		else:
+			r_dot = 1
+			theta_dot = -0.5
+	# otherwise, either back up if goal is close, or spin and then move toward goal
+	else:
+		i = 1
+		if abs(angle_difference) < np.pi:
+			i = -1
+		if distance_to_goal < 1.2:
+			if abs(angle_difference - np.pi) < .1:
+				r_dot = -1
+				theta_dot = 0
+			else:
+				r_dot = -1
+				theta_dot = i/2
+		else:
+			r_dot = 0
+			theta_dot = -5*i
+			lin = Vector3(r_dot,0,0)
+			ang = Vector3(0,0,theta_dot)
+			while abs(angle_difference)>.05:
+				#print(turtle_name+": Ok! My angle error is "+str(angle_difference)+", so I am spinning!")
+				angle_difference = force_angle-theta
+				stumble = Twist(lin,ang)
+				pub_vel.publish(stumble)
+			r_dot = 1
+			theta_dot = 0
+
+	return (r_dot,theta_dot)
+
+def smiler(robot_name,smile,direction):
+	global x
+	global y
+	if smile != 0:
+		th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi) - (5-smile)*np.pi/10
+		go_to(robot_name,x,y,th)
 
 # main driving function for followers (turtlesim and sphero)
-def follow(robot_name):
+def follow(robot_name,robot_number):
 
 	global mode
+	global x
+	global y
+	global theta
+	global smile
 
 	rospy.init_node(robot_name+'_driver', anonymous=True)
 	rate = rospy.Rate(350) # hz
@@ -117,11 +201,10 @@ def follow(robot_name):
 
 	if sim == True:
 		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
-		p_x = 10
-		p_y = float(np.random.randint(3,30))/3
+		p_x = 9
+		p_y = robot_number/2+4
 		th = np.pi
 
-		global x
 		while x==0: # wait for published messages to start being read
 			time.sleep(1)
 
@@ -135,7 +218,7 @@ def follow(robot_name):
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
 	add_to_mode_counter(int(robot_name.replace('sphero','')))
 	wait_for_next_mode()
-	print(robot_name+": Time for the next mode: "+str(mode))
+	#print(robot_name+": Time for the next mode: "+str(mode))
 
 	while not rospy.is_shutdown():
 
@@ -145,22 +228,65 @@ def follow(robot_name):
 				# wait
 				r_dot = 0
 				theta_dot = 0
+				mode = 1
 
 			elif mode == 1:
-				# move forward or back depending on how happy you are to dance
-				r_dot = 0
-				theta_dot = 0
+				# if a leader gets close, turn toward or away from them
+				leader_name = 'sphero'+str(int(robot_name.replace('sphero',''))-1)
+				rospy.wait_for_service('robot_locator')
+				try:
+					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+					resp1 = robot_locator(leader_name)
+				except rospy.ServiceException, e:
+					print "Service call failed: %s"%e
+				their_pose = np.array([resp1.x,resp1.y])
+				direction = their_pose-np.array([x,y])
+				if np.linalg.norm(direction) < 4:
+					smiler(robot_name,smile,direction)
+					time.sleep(5)
+					mode = 2
 
 			elif mode == 2:
 				# navigate to dance floor using force model
 				# print(robot_name+": You lead the way!")
-				r_dot = 0
-				theta_dot = 0
+				try:
+					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+					resp1 = robot_locator(leader_name)
+				except rospy.ServiceException, e:
+					print "Service call failed: %s"%e
+				their_pose = np.array([resp1.x,resp1.y])
+				goal = their_pose + np.array([2,0])
+				if np.linalg.norm(goal-np.array([x,y]))<.3:
+					go_to(robot_name,x,y,np.pi)
+					lin = Vector3(0,0,0)
+					ang = Vector3(0,0,0)
+					glide = Twist(lin,ang)
+					pub_vel.publish(glide)
+					add_to_mode_counter(int(robot_name.replace('sphero','')))
+					wait_for_next_mode()
+				else:
+					(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
+
+			elif mode == 3:
+				# dance with partner and avoid others
+				try:
+					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+					resp1 = robot_locator(leader_name)
+				except rospy.ServiceException, e:
+					print "Service call failed: %s"%e
+				their_pose = np.array([resp1.x,resp1.y])
+				# make sure to face your partner
+				direction = their_pose-np.array([x,y])
+				th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
+				if np.linalg.norm(th-theta) > 0.05:
+					go_to(robot_name,x,y,th)
+				# stay a certain distance in front of your partner
+				goal = their_pose + np.array([2,0])
+				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 			else:
-				# dance in a circle with partner and avoid others
-				r_dot = 0
-				theta_dot = 0
+				go_to(robot_name,10,y,np.pi)
+				return
 
 			lin = Vector3(r_dot,0,0)
 			ang = Vector3(0,0,theta_dot)
@@ -199,11 +325,19 @@ if __name__ == '__main__':
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
 	baby_name = 'sphero'+str(baby_number)
 
+	# defines how happy a robot is about dancing. All but sphero2 will be neutral (0)
+	# sphero2's value will be varied for our experment. -5 = very unhappy, 5 = very happy
+	if baby_name == 'sphero2':
+		smile = 5
+	else:
+		smile = 0
+
+
 	while rospy.get_param("setup_complete") == False:
 		time.sleep(1)
 
 	try:
-		follow(baby_name)
+		follow(baby_name,baby_number)
 		rospy.spin() # not sure why I put this here. Perhaps it should go inside follow()
 	except rospy.ROSInterruptException:
 		pass

@@ -24,7 +24,7 @@ def t_pose_callback(data):
 	robot_poses[robot_name][0] = data.x
 	robot_poses[robot_name][1] = data.y
 
-def get_net_force(robot_name,goal,goal_name):
+def get_net_force(robot_name,goal,partner_name):
 
 	net_force = np.array([0,0])
 	goal_coefficient = 10
@@ -37,7 +37,7 @@ def get_net_force(robot_name,goal,goal_name):
 		stranger = 'sphero'+str(i)
 		global robot_poses
 
-		if stranger!=robot_name and stranger!=goal_name:	# There is no force on that robot from itself and sphero 2 is not a repelling force
+		if stranger!=robot_name and stranger!=partner_name:	# There is no force on that robot from itself and sphero 2 is not a repelling force
 			if robot_poses[stranger]==[0,0]:
 				time.sleep(.1) # wait for robot's pos to be updated for the first time
 				if robot_poses[stranger]==[0,0]: # if it still hasn't updated, that's because there is no robot with that name (lazy programming on my part)
@@ -47,7 +47,7 @@ def get_net_force(robot_name,goal,goal_name):
 			stranger_pos = np.array(robot_poses[stranger])
 			stranger_pointer = stranger_pos-np.array([x,y]) # vector from current robot to stranger robot
 			stranger_dist = np.linalg.norm(stranger_pointer)
-			stranger_force = rospy.get_param('total_robot_n')*2.5/np.linalg.norm(stranger_pointer)*stranger_pointer/np.linalg.norm(stranger_pointer)
+			stranger_force = rospy.get_param('total_robot_n')*3/np.linalg.norm(stranger_pointer)*stranger_pointer/np.linalg.norm(stranger_pointer)
 			net_force = net_force-stranger_force
 			#print(robot_name+": due to "+stranger+": "+str(-stranger_force))
 			if stranger_dist<.5:
@@ -64,7 +64,7 @@ def get_net_force(robot_name,goal,goal_name):
 
 
 def handle(req):
-    force = get_net_force(req.name,[req.goal_x,req.goal_y],req.goal_name)
+    force = get_net_force(req.name,[req.goal_x,req.goal_y],req.partner_name)
     return SocialForceResponse(force[0],force[1])
 
 def social_force_server():
