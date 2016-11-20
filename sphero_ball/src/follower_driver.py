@@ -201,7 +201,7 @@ def follow(robot_name,robot_number):
 
 	if sim == True:
 		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
-		p_x = 31
+		p_x = 20
 		p_y = robot_number/2+4
 		th = np.pi
 
@@ -285,7 +285,7 @@ def follow(robot_name,robot_number):
 				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 			else:
-				go_to(robot_name,10,y,np.pi)
+				go_to(robot_name,20,y,np.pi)
 				return
 
 			lin = Vector3(r_dot,0,0)

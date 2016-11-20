@@ -187,8 +187,8 @@ def driver(robot_name,robot_number):
 
 	if sim == True:
 		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
-		p_x = 1
-		p_y = np.mod(robot_number + 5,11)
+		p_x = 2
+		p_y = np.mod(robot_number + 5,15)
 		th = 0
 
 		while x==0: # wait for published messages to start being read
@@ -258,9 +258,9 @@ def driver(robot_name,robot_number):
 
 			elif mode == 2:
 				rate = rospy.Rate(350) #hz
-				# navigate to dance floor using force model
 
-				goal = np.array([3,2+int(robot_name.replace('sphero',''))])
+				# navigate to dance floor using force model
+				goal = np.array([10,2*int(robot_name.replace('sphero',''))])
 
 				if np.linalg.norm(goal-np.array([x,y]))<.3:
 					go_to(robot_name,x,y,0)
@@ -311,7 +311,7 @@ def driver(robot_name,robot_number):
 					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
 					dance_state = np.mod(dance_state + 1,4)
 			else: 
-				go_to(robot_name,1,y,th)
+				go_to(robot_name,2,y,th)
 				return
 
 			lin = Vector3(r_dot,0,0)
