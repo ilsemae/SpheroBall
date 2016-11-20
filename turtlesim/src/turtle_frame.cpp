@@ -44,12 +44,12 @@ namespace turtlesim
 
 TurtleFrame::TurtleFrame(QWidget* parent, Qt::WindowFlags f)
 : QFrame(parent, f)
-, path_image_(1500, 700, QImage::Format_ARGB32)
+, path_image_(1300, 700, QImage::Format_ARGB32)
 , path_painter_(&path_image_)
 , frame_count_(0)
 , id_counter_(0)
 {
-  setFixedSize(1100, 700);
+  setFixedSize(1300, 700);
   setWindowTitle("Sphero Ball Simulation");
 
   srand(time(NULL));

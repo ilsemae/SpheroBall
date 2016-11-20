@@ -260,7 +260,7 @@ def driver(robot_name,robot_number):
 				rate = rospy.Rate(350) #hz
 
 				# navigate to dance floor using force model
-				goal = np.array([3+2*int(robot_name.replace('sphero','')),8])
+				goal = np.array([1+3*int(robot_name.replace('sphero','')),8])
 
 				if np.linalg.norm(goal-np.array([x,y]))<.3:
 					go_to(robot_name,x,y,-np.pi/2)

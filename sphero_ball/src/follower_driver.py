@@ -26,7 +26,7 @@ def chatter_callback(data):
 		print "Thank you as well!"
 		mode = 4
 	else:
-		print "Sure, I'll dance with you, "+data.data+"!"
+		print "That would be lovely, "+data.data+"!"
 		mode = 2
 
 # turtle position callback
@@ -285,7 +285,7 @@ def follow(robot_name,robot_number):
 				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 			else:
-				go_to(robot_name,x,2,np.pi)
+				go_to(robot_name,x,1,np.pi)
 				return
 
 			lin = Vector3(r_dot,0,0)
