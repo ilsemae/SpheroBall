@@ -201,7 +201,7 @@ def follow(robot_name,robot_number):
 
 	if sim == True:
 		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
-		p_x = 9
+		p_x = 31
 		p_y = robot_number/2+4
 		th = np.pi
 
