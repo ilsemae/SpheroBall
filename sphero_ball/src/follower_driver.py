@@ -201,9 +201,9 @@ def follow(robot_name,robot_number):
 
 	if sim == True:
 		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
-		p_x = 20
-		p_y = robot_number/2+4
-		th = np.pi
+		p_x = robot_number/1.5+7
+		p_y = 1
+		th = np.pi/2
 
 		while x==0: # wait for published messages to start being read
 			time.sleep(1)
@@ -255,9 +255,9 @@ def follow(robot_name,robot_number):
 				except rospy.ServiceException, e:
 					print "Service call failed: %s"%e
 				their_pose = np.array([resp1.x,resp1.y])
-				goal = their_pose + np.array([2,0])
+				goal = their_pose + np.array([0,-2])
 				if np.linalg.norm(goal-np.array([x,y]))<.3:
-					go_to(robot_name,x,y,np.pi)
+					go_to(robot_name,x,y,np.pi/2)
 					lin = Vector3(0,0,0)
 					ang = Vector3(0,0,0)
 					glide = Twist(lin,ang)
@@ -281,11 +281,11 @@ def follow(robot_name,robot_number):
 				if np.linalg.norm(th-theta) > 0.05:
 					go_to(robot_name,x,y,th)
 				# stay a certain distance in front of your partner
-				goal = their_pose + np.array([2,0])
+				goal = their_pose + np.array([0,-2])
 				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 			else:
-				go_to(robot_name,20,y,np.pi)
+				go_to(robot_name,x,2,np.pi)
 				return
 
 			lin = Vector3(r_dot,0,0)
