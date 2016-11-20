@@ -267,7 +267,7 @@ def driver(robot_name,robot_number):
 					add_to_mode_counter(int(robot_name.replace('sphero','')))
 					print(robot_name+": Okay, ready to start the dance!")
 					wait_for_next_mode()
-					print(robot_name+": Time for the next mode: "+str(mode))
+					#print(robot_name+": Time for the next mode: "+str(mode))
 					lin = Vector3(0,0,0)
 					ang = Vector3(0,0,0)
 					glide = Twist(lin,ang)
