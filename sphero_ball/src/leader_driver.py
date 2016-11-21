@@ -89,14 +89,14 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	i = np.sign(goal_angle-theta)
 	if abs(goal_angle-theta) > np.pi:
 		i = -i
-	ang = Vector3(0,0,.5*i)
+	ang = Vector3(0,0,i)
 	lin = Vector3(0,0,0)
 	while abs(goal_angle-theta)>.01 and np.linalg.norm(direction) != 0:
 		stumble = Twist(lin,ang)
 		pub.publish(stumble)
 		rate.sleep()
 	ang = Vector3(0,0,0)
-	lin = Vector3(3,0,0)
+	lin = Vector3(7,0,0)
 	while np.linalg.norm(goal_pose-current_pose)>.1 and np.linalg.norm(direction) != 0:
 		current_pose = np.array([x,y])
 		stumble = Twist(lin,ang)
@@ -106,7 +106,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	i = np.sign(goal_angle-theta)
 	if abs(goal_angle-theta) > np.pi:
 		i = -i
-	ang = Vector3(0,0,.5*i)
+	ang = Vector3(0,0,i)
 	lin = Vector3(0,0,0)
 	while abs(theta-goal_angle)>.1:
 		stumble = Twist(lin,ang)

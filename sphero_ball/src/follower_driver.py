@@ -79,7 +79,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	i = np.sign(goal_angle-theta)
 	if abs(goal_angle-theta) > np.pi:
 		i = -i
-	ang = Vector3(0,0,.5*i)
+	ang = Vector3(0,0,i)
 	lin = Vector3(0,0,0)
 	# if you are not at your goal x,y, spin until you are facing your goal:
 	while abs(goal_angle-theta)>.01 and np.linalg.norm(direction) > 0.1:
@@ -88,7 +88,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 		pub.publish(stumble)
 		rate.sleep()
 	ang = Vector3(0,0,0)
-	lin = Vector3(3,0,0)
+	lin = Vector3(7,0,0)
 	# move toward your goal
 	while np.linalg.norm(goal_pose-current_pose) > 0.1 and np.linalg.norm(direction) > 0.1:
 		#print "moving toward goal position"
@@ -100,7 +100,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	i = np.sign(goal_angle-theta)
 	if abs(goal_angle-theta) > np.pi:
 		i = -i
-	ang = Vector3(0,0,.5*i)
+	ang = Vector3(0,0,i)
 	lin = Vector3(0,0,0)
 	# spin until you reach your given angle
 	while abs(theta-goal_angle)>.1:
@@ -194,7 +194,7 @@ def follow(robot_name,robot_number):
 	global smile
 
 	rospy.init_node(robot_name+'_driver', anonymous=True)
-	rate = rospy.Rate(350) # hz
+	rate = rospy.Rate(750) # hz
 	rospy.Subscriber(robot_name+'/chatter',String,chatter_callback)
 
 	sim = rospy.get_param("simulation")
@@ -278,7 +278,7 @@ def follow(robot_name,robot_number):
 				# make sure to face your partner
 				direction = their_pose-np.array([x,y])
 				th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-				if np.linalg.norm(th-theta) > 0.05:
+				if np.linalg.norm(th-theta) > 0.1:
 					go_to(robot_name,x,y,th)
 				# stay a certain distance in front of your partner
 				goal = their_pose + np.array([0,-2])
