@@ -49,7 +49,7 @@ def music_callback(data):
 		dance_state = 0
 		print "Let the dance begin!"
 	else:
-		dance_state = 5
+		dance_state = 99999
 		print "The dance has ended"
 
 def add_to_mode_counter(i):
@@ -316,7 +316,7 @@ def driver(robot_name,robot_number):
 					elif dance_state == 1:
 						goal = np.array([x,y]) + 0.5*np.array([np.cos(theta),np.sin(theta)])
 						(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-					elif dance_state >= 2:
+					elif dance_state >= 2 and dance_state < 100:
 						rate = rospy.Rate(2) # hz
 						(r_dot,theta_dot) = (-.5*1.5,-.5)
 					else:
