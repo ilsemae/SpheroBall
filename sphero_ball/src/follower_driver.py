@@ -79,7 +79,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	i = np.sign(goal_angle-theta)
 	if abs(goal_angle-theta) > np.pi:
 		i = -i
-	ang = Vector3(0,0,i)
+	ang = Vector3(0,0,2*i)
 	lin = Vector3(0,0,0)
 	# if you are not at your goal x,y, spin until you are facing your goal:
 	while abs(goal_angle-theta)>.01 and np.linalg.norm(direction) > 0.1:
@@ -100,7 +100,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	i = np.sign(goal_angle-theta)
 	if abs(goal_angle-theta) > np.pi:
 		i = -i
-	ang = Vector3(0,0,i)
+	ang = Vector3(0,0,2*i)
 	lin = Vector3(0,0,0)
 	# spin until you reach your given angle
 	while abs(theta-goal_angle)>.1:
