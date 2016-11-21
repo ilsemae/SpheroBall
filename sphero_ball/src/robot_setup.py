@@ -20,7 +20,7 @@ class RobotSetup:
       rospy.Subscriber('rosout', Log, self.set_bt_state)
       self.connect_to_spheros()
     rospy.set_param('setup_complete', True)
-    raw_input('Press enter to being the dance.')
+    raw_input('Press enter to begin the dance.')
     pub.publish(String('begin'))
     raw_input('Press enter to end the dance.')
     pub.publish(String('end'))
