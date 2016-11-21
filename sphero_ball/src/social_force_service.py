@@ -11,7 +11,7 @@ class SocialForceServer:
   def __init__(self):
     self.n = rospy.get_param('total_robot_n')
     # Used to calculate force due to the other robots.
-    self.robot_poses = {"sphero"+str(i+1): [0,0] for i in range(self.n)}
+    self.robot_poses = {"sphero"+str(i+1): [-1,-1] for i in range(self.n)}
 
     rospy.init_node('social_force_server')
     rospy.Service('social_force', SocialForce, self.handle)
@@ -42,9 +42,9 @@ class SocialForceServer:
       # There is no force on the robot from itself
       # and the goal robot is not a repelling force.
       if stranger != robot_name and stranger != partner_name:
-        if self.robot_poses[stranger] == [0,0]: # TODO what if pos is validly [0,0]? should be negative?
+        if self.robot_poses[stranger] == [-1,-1]:
           time.sleep(.1) # wait for robot's pos to be updated for the first time
-          if self.robot_poses[stranger] == [0,0]:
+          if self.robot_poses[stranger] == [-1,-1]:
             continue # skip this iteration
         # TODO: if this robot is a leader, avoid it (where does this factor in?)
         # For each stranger robot, the weight of the goal
