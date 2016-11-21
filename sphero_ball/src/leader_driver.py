@@ -290,41 +290,44 @@ def driver(robot_name,robot_number):
 
 			elif mode == 3:
 
-				try:
-					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
-					resp1 = robot_locator(follower_name)
-				except rospy.ServiceException, e:
-					print "Service call failed: %s"%e
-				their_pose = np.array([resp1.x,resp1.y])
-
-				# make sure to face your partner
-				direction = their_pose-np.array([x,y])
-				th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-				go_to(robot_name,x,y,th)
-
 				# dance with partner and avoid others
 				if dance_state == -1:
 					r_dot = 0
 					theta_dot = 0
 				else:
-					rate = rospy.Rate(.5) # hz
+
 					if dance_state == 0:
-						goal = np.array([x,y]) + 0.5*np.array([np.cos(theta),np.sin(theta)])
+
+						try:
+							robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+							resp1 = robot_locator(follower_name)
+						except rospy.ServiceException, e:
+							print "Service call failed: %s"%e
+						their_pose = np.array([resp1.x,resp1.y])
+
+						# make sure to face your partner
+						direction = their_pose-np.array([x,y])
+						th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
+						go_to(robot_name,x,y,th)
+
+						rate = rospy.Rate(.5) # hz
+						goal = np.array([x,y]) - 0.5*np.array([np.cos(theta),np.sin(theta)])
+						(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
 					elif dance_state == 1:
-						goal = np.array([x,y]) - 0.5*np.array([np.cos(theta),np.sin(theta)])
-					elif dance_state == 2:
 						goal = np.array([x,y]) + 0.5*np.array([np.cos(theta),np.sin(theta)])
-					elif dance_state == 3:
-						goal = np.array([x,y]) - 0.5*np.array([np.cos(theta),np.sin(theta)])
+						(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+					elif dance_state >= 2:
+						rate = rospy.Rate(2) # hz
+						(r_dot,theta_dot) = (-.5*1.5,-.5)
 					else:
+						rate = rospy.Rate(750) # hz
 						print(robot_name+": Thank you for a lovely dance, "+follower_name+".")
 						dance_end = String('bow')
 						pub_chat.publish(dance_end)
-						rate = rospy.Rate(750) # hz
 						mode = 4
 
-					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-					dance_state = np.mod(dance_state + 1,4)
+					#(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+					dance_state = np.mod(dance_state + 1,16)
 
 			else: 
 				go_to(robot_name,x,13,th)

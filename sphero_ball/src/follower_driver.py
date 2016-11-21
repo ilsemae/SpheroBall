@@ -293,8 +293,11 @@ def follow(robot_name,robot_number):
 				if np.linalg.norm(th-theta) > 0.2:
 					go_to(robot_name,x,y,th)
 				# stay a certain distance in front of your partner
-				goal = their_pose + np.array([0,-2])
-				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
+				goal = their_pose - 1.5*direction/np.linalg.norm(direction)
+				if np.linalg.norm(goal-np.array([x,y])) < .1:
+					(r_dot,theta_dot) = (0,0)
+				else:
+					(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 			else:
 				go_to(robot_name,x,1,np.pi)
