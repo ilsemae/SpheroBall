@@ -264,6 +264,7 @@ def follow(robot_name,robot_number):
 					pub_vel.publish(glide)
 					add_to_mode_counter(int(robot_name.replace('sphero','')))
 					wait_for_next_mode()
+					print("ok dance time")
 				else:
 					(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
@@ -278,7 +279,7 @@ def follow(robot_name,robot_number):
 				# make sure to face your partner
 				direction = their_pose-np.array([x,y])
 				th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-				if np.linalg.norm(th-theta) > 0.1:
+				if np.linalg.norm(th-theta) > 0.2:
 					go_to(robot_name,x,y,th)
 				# stay a certain distance in front of your partner
 				goal = their_pose + np.array([0,-2])
