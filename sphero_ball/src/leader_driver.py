@@ -138,21 +138,24 @@ def navigate_toward(goal,robot_name,follower_name):
 	angle_difference = np.mod(force_angle - theta,2*np.pi)
 	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
 
+	speed_lin = 2
+	speed_ang = speed_lin/2
+
 	# if force angle points in front of robot, turn and move forward at the same time
 	if angle_difference < np.pi/2 :
 		if angle_difference < .1:
-			r_dot = 1
+			r_dot = speed_lin
 			theta_dot = 0
 		else:
-			r_dot = 1
-			theta_dot = 0.5
+			r_dot = speed_lin
+			theta_dot = speed_ang
 	elif angle_difference > 3*np.pi/2: 
 		if angle_difference > 2*np.pi-.1:
-			r_dot = 1
+			r_dot = speed_lin
 			theta_dot = 0
 		else:
-			r_dot = 1
-			theta_dot = -0.5
+			r_dot = speed_lin
+			theta_dot = -speed_ang
 	# otherwise, either back up if goal is close, or spin and then move toward goal
 	else:
 		i = 1
@@ -160,11 +163,11 @@ def navigate_toward(goal,robot_name,follower_name):
 			i = -1
 		if distance_to_goal < 1.2:
 			if abs(angle_difference - np.pi) < .1:
-				r_dot = -1
+				r_dot = -speed_lin
 				theta_dot = 0
 			else:
-				r_dot = -1
-				theta_dot = i/2
+				r_dot = -speed_lin
+				theta_dot = i*speed_ang
 		else:
 			r_dot = 0
 			theta_dot = -5*i
@@ -175,7 +178,7 @@ def navigate_toward(goal,robot_name,follower_name):
 				angle_difference = force_angle-theta
 				stumble = Twist(lin,ang)
 				pub_vel.publish(stumble)
-			r_dot = 1
+			r_dot = speed_lin
 			theta_dot = 0
 	return (r_dot,theta_dot)
 
@@ -330,7 +333,7 @@ def driver(robot_name,robot_number):
 					dance_state = np.mod(dance_state + 1,16)
 
 			else: 
-				go_to(robot_name,x,13,th)
+				(r_dot,theta_dot) = navigate_toward([x,13],robot_name,leader_name)
 				return
 
 			lin = Vector3(r_dot,0,0)

@@ -29,7 +29,10 @@ class RobotSetup:
   def spawn_sim_spheros(self):
     for i in range(self.n):
       name = 'sphero'+str(i+1)
-      rospy.ServiceProxy('spawn', Spawn).call(13, 7, 0, name, i%2)
+      color = i%2
+      if i == 1:
+        color = 5
+      rospy.ServiceProxy('spawn', Spawn).call(13, 7, 0, name, color)
 
   def connect_to_spheros(self):
     """ Loops until a Sphero is connected. """

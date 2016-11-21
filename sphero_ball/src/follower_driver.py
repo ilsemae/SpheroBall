@@ -135,22 +135,24 @@ def navigate_toward(goal,robot_name,leader_name):
 	angle_difference = np.mod(force_angle - theta,2*np.pi)
 	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
 
+	speed_lin = 2
+	speed_ang = speed_lin/2
 
 	# if force angle points in front of robot, turn and move forward at the same time
 	if angle_difference < np.pi/2 :
 		if angle_difference < .1:
-			r_dot = 1
+			r_dot = speed_lin
 			theta_dot = 0
 		else:
-			r_dot = 1
-			theta_dot = 0.5
+			r_dot = speed_lin
+			theta_dot = speed_ang
 	elif angle_difference > 3*np.pi/2: 
 		if angle_difference > 2*np.pi-.1:
-			r_dot = 1
+			r_dot = speed_lin
 			theta_dot = 0
 		else:
-			r_dot = 1
-			theta_dot = -0.5
+			r_dot = speed_lin
+			theta_dot = -speed_ang
 	# otherwise, either back up if goal is close, or spin and then move toward goal
 	else:
 		i = 1
@@ -158,11 +160,11 @@ def navigate_toward(goal,robot_name,leader_name):
 			i = -1
 		if distance_to_goal < 1.2:
 			if abs(angle_difference - np.pi) < .1:
-				r_dot = -1
+				r_dot = -speed_lin
 				theta_dot = 0
 			else:
-				r_dot = -1
-				theta_dot = i/2
+				r_dot = -speed_lin
+				theta_dot = i*speed_ang
 		else:
 			r_dot = 0
 			theta_dot = -5*i
@@ -173,7 +175,7 @@ def navigate_toward(goal,robot_name,leader_name):
 				angle_difference = force_angle-theta
 				stumble = Twist(lin,ang)
 				pub_vel.publish(stumble)
-			r_dot = 1
+			r_dot = speed_lin
 			theta_dot = 0
 
 	return (r_dot,theta_dot)
@@ -308,7 +310,7 @@ def follow(robot_name,robot_number):
 					go_to(robot_name,x,y,th)
 				# stay a certain distance in front of your partner
 				goal = their_pose - 1.5*direction/np.linalg.norm(direction)
-				if np.linalg.norm(goal-np.array([x,y])) < .1:
+				if np.linalg.norm(goal-np.array([x,y])) < .3:
 					(r_dot,theta_dot) = (0,0)
 					if smile > 0 and dance_begun == False:
 						go_to(robot_name,x,y,theta + np.pi/7)
@@ -318,8 +320,7 @@ def follow(robot_name,robot_number):
 					(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 			else:
-				go_to(robot_name,x,1,np.pi)
-				return
+				(r_dot,theta_dot) = navigate_toward([x,1],robot_name,leader_name)
 
 			lin = Vector3(r_dot,0,0)
 			ang = Vector3(0,0,theta_dot)
@@ -361,7 +362,7 @@ if __name__ == '__main__':
 	# defines how happy a robot is about dancing. All but sphero2 will be neutral (0)
 	# sphero2's value will be varied for our experment. -5 = very unhappy, 5 = very happy
 	if baby_name == 'sphero2':
-		smile = -5
+		smile = 5
 	else:
 		smile = 0
 
