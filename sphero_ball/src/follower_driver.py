@@ -27,7 +27,6 @@ def chatter_callback(data):
 		mode = 4
 	else:
 		print "That would be lovely, "+data.data+"!"
-		mode = 2
 
 # turtle position callback
 def pose_callback(data):
@@ -177,12 +176,17 @@ def navigate_toward(goal,robot_name,leader_name):
 
 	return (r_dot,theta_dot)
 
-def smiler(robot_name,smile,direction):
+def smiler(robot_name,smile,goal,leader_name):
 	global x
 	global y
+	global mode
+	(r_dot,theta_dot) = (0,0)
 	if smile != 0:
-		th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi) - (5-smile)*np.pi/10
-		go_to(robot_name,x,y,th)
+		(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
+	return (r_dot,theta_dot)
+
+#		th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi) - (5-smile)*np.pi/10
+#		go_to(robot_name,x,y,th)
 
 # main driving function for followers (turtlesim and sphero)
 def follow(robot_name,robot_number):
@@ -241,14 +245,22 @@ def follow(robot_name,robot_number):
 					print "Service call failed: %s"%e
 				their_pose = np.array([resp1.x,resp1.y])
 				direction = their_pose-np.array([x,y])
-				if np.linalg.norm(direction) < 4:
-					smiler(robot_name,smile,direction)
-					time.sleep(5)
+				if np.linalg.norm(direction) < 3:
+					(r_dot,theta_dot) = smiler(robot_name,smile,their_pose,leader_name)
+					lin = Vector3(r_dot,0,0)
+					ang = Vector3(0,0,theta_dot)
+					glide = Twist(lin,ang)
+					pub_vel.publish(glide)
+					time.sleep(.5)
+					lin = Vector3(0,0,0)
+					ang = Vector3(0,0,0)
+					glide = Twist(lin,ang)
+					pub_vel.publish(glide)
+					time.sleep(3.5)
 					mode = 2
 
 			elif mode == 2:
 				# navigate to dance floor using force model
-				# print(robot_name+": You lead the way!")
 				try:
 					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
 					resp1 = robot_locator(leader_name)
@@ -264,7 +276,6 @@ def follow(robot_name,robot_number):
 					pub_vel.publish(glide)
 					add_to_mode_counter(int(robot_name.replace('sphero','')))
 					wait_for_next_mode()
-					print("ok dance time")
 				else:
 					(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 

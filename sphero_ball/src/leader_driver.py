@@ -233,7 +233,7 @@ def driver(robot_name,robot_number):
 
 				# stall until you build up the courage to ask someone to dance
 				# randomly decide when this leader will go find a partner
-				a = np.random.randint(0,4000)
+				a = np.random.randint(0,8000)
 				if a == 7:
 					mode = 1
 					print(robot_name+": Okay, I'm feeling brave!")

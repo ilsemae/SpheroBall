@@ -34,7 +34,7 @@ class SocialForceServer:
   def get_net_force(self, robot_name, partner_name, goal_x, goal_y):
     x,y = self.robot_poses[robot_name]
     net_force = np.array([0,0])
-    goal_coefficient = 10
+    goal_coefficient = (self.n-1)*30 # Weight of the goal be proportional to total # of robots.
 
     # Add the social force from each stranger robot
     for i in range(self.n):
@@ -47,13 +47,11 @@ class SocialForceServer:
           if self.robot_poses[stranger] == [-1,-1]:
             continue # skip this iteration
         # TODO: if this robot is a leader, avoid it (where does this factor in?)
-        # For each stranger robot, the weight of the goal
-        # must increase to keep it proportionally important.
-        goal_coefficient = goal_coefficient + 30
+        
         stranger_pos = np.array(self.robot_poses[stranger])
         stranger_pointer = stranger_pos-np.array([x,y]) # vector from current robot to stranger robot
         stranger_dist = np.linalg.norm(stranger_pointer)
-        stranger_force = self.n*2.5/np.linalg.norm(stranger_pointer)*stranger_pointer/np.linalg.norm(stranger_pointer)
+        stranger_force = 5/stranger_dist*stranger_pointer/stranger_dist
         net_force = net_force-stranger_force
         #print(robot_name+": due to "+stranger+": "+str(-stranger_force))
         if stranger_dist<.5:
