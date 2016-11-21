@@ -201,7 +201,7 @@ def driver(robot_name,robot_number):
 		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
 		p_x = 2*np.mod(robot_number,5)+5
 		p_y = 13
-		th = 0
+		th = -np.pi/2
 
 		while x==0: # wait for published messages to start being read
 			time.sleep(1)
