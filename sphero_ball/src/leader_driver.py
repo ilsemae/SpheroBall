@@ -79,7 +79,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	global theta
 
 	pub = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
-	rate = rospy.Rate(350) #hz
+	rate = rospy.Rate(750) #hz
 
 	goal_pose = np.array([pose_x,pose_y])
 	current_pose = np.array([x,y])
@@ -320,7 +320,7 @@ def driver(robot_name,robot_number):
 						print(robot_name+": Thank you for a lovely dance, "+follower_name+".")
 						dance_end = String('bow')
 						pub_chat.publish(dance_end)
-						rate = rospy.Rate(350) # hz
+						rate = rospy.Rate(750) # hz
 						mode = 4
 
 					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)

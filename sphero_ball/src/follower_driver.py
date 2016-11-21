@@ -69,7 +69,7 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	global theta
 
 	pub = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
-	rate = rospy.Rate(350) #hz
+	rate = rospy.Rate(750) #hz
 
 	goal_pose = np.array([pose_x,pose_y])
 	current_pose = np.array([x,y])
