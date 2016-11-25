@@ -1,0 +1,44 @@
+<launch>
+
+	<arg name="sim" default="True" />
+	<param name="simulation" type="boolean" value="$(arg sim)" />
+
+	<arg name="n" default="2" />
+	<param name="total_robot_n" type="int" value="$(arg n)" />
+
+	<param name="mode" type="int" value="-1" />
+
+	<param name="mode_checker_1" type="int" value="0" />
+	<param name="mode_checker_2" type="int" value="0" />
+	<param name="mode_checker_3" type="int" value="0" />
+	<param name="mode_checker_4" type="int" value="0" />
+	<param name="mode_checker_5" type="int" value="0" />
+	<param name="mode_checker_6" type="int" value="0" />
+	<param name="mode_checker_7" type="int" value="0" />
+	<param name="mode_checker_8" type="int" value="0" />
+
+	<node pkg="sphero_ball_real" name="spheros_connector" type="robot_setup.py" output="screen" />
+	<param name="setup_complete" type="boolean" value="False" />
+
+	<node pkg="sphero_ball_real" name="social_force" type="social_force_service.py" output="screen" />
+	<node pkg="sphero_ball_real" name="robot_locator" type="robot_location_service.py" output="screen" />
+
+	<!-- launch turtlesim - needs to be manually commented out when running non sim version -->
+	<!-- would be nice to do this from robot_setup.py --> 
+	<node pkg="turtlesim" name="turtlesim" type="turtlesim_node"/>  
+
+	<!-- leader and follower robots below. make sure only n of them are uncommented when running launch file -->
+
+	<!-- leaders all have odd args -->
+	<node pkg="sphero_ball_real" name="sphero1_driver" type="leader_driver.py" output="screen" args="1" />
+	<node pkg="sphero_ball_real" name="sphero3_driver" type="leader_driver.py" output="screen" args="3" />
+	<node pkg="sphero_ball_real" name="sphero5_driver" type="leader_driver.py" output="screen" args="5" />
+	<node pkg="sphero_ball_real" name="sphero7_driver" type="leader_driver.py" output="screen" args="7" />
+
+	<!-- followers all have even args -->
+	<node pkg="sphero_ball_real" name="sphero2_driver" type="follower_driver.py" output="screen" args="2" />
+	<node pkg="sphero_ball_real" name="sphero4_driver" type="follower_driver.py" output="screen" args="4" />
+	<node pkg="sphero_ball_real" name="sphero6_driver" type="follower_driver.py" output="screen" args="6" />
+	<node pkg="sphero_ball_real" name="sphero8_driver" type="follower_driver.py" output="screen" args="8" />
+
+</launch>
