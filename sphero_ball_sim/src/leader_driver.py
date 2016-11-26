@@ -8,9 +8,8 @@ import time
 from std_msgs.msg import String, ColorRGBA
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
-from turtlesim.srv import Spawn, SetPen
+from turtlesim.srv import Spawn, SetPen, Kill
 from turtlesim.msg import Color, Pose
-from nav_msgs.msg import Odometry
 from sphero_ball_sim.srv import *
 
 x = 0
@@ -31,15 +30,6 @@ def pose_callback(data):
 	y = data.y
 	theta = float(np.mod(data.theta,2*np.pi)) # bring angle value to within +2*pi
 	#print(data)
-
-# sphero position callback
-def odom_callback(data):
-	global x
-	global y
-	global theta
-	x = data.pose.pose.position.x
-	y = data.pose.pose.position.y
-	theta = float(np.mod(data.pose.pose.orientation.w,2*np.pi)) # bring angle value to within +2*pi
 
 # used to begin and end the dance
 def music_callback(data):
@@ -197,25 +187,17 @@ def driver(robot_name,robot_number):
 	rospy.init_node(robot_name+'_driver', anonymous=True)
 	rate = rospy.Rate(750) # hz
 
-	sim = rospy.get_param("simulation")
 	rospy.Subscriber('music', String, music_callback)
 
-	if sim == True:
-		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
-		p_x = 2*np.mod(robot_number,5)+5
-		p_y = 13
-		th = -np.pi/2
+	rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
+	p_x = 2*np.mod(robot_number,5)+5
+	p_y = 13
+	th = -np.pi/2
 
-		while x==0: # wait for published messages to start being read
-			time.sleep(1)
+	while x==0: # wait for published messages to start being read
+		time.sleep(1)
 
-		go_to(robot_name,p_x,p_y,th)
-
-	else:
-
-		rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
-		pub_color = rospy.Publisher(robot_name+'/set_color', ColorRGBA, queue_size=10)
-		color = ColorRGBA(100,30,0,0)
+	go_to(robot_name,p_x,p_y,th)
 
 	print(robot_name+': ready to go find a dance partner!')
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
@@ -227,142 +209,114 @@ def driver(robot_name,robot_number):
 
 		t = time.time() # current time in seconds
 		
-		if sim == True:
+		if mode == 0:
 
-			if mode == 0:
+			r_dot = 0
+			theta_dot = 0
 
+			# stall until you build up the courage to ask someone to dance
+			# randomly decide when this leader will go find a partner
+			a = np.random.randint(0,8000)
+			if a == 7:
+				mode = 1
+				print(robot_name+": Okay, I'm feeling brave!")
+
+		# go ask a follower to dance
+		elif mode == 1:
+
+			follower_number=int(robot_name.replace('sphero',""))
+			follower_name = 'sphero' + str(follower_number+1)
+			pub_chat = rospy.Publisher(follower_name+'/chatter', String, queue_size=10)
+
+			rospy.wait_for_service('robot_locator')
+			try:
+				robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+				resp1 = robot_locator(follower_name)
+			except rospy.ServiceException, e:
+				print "Service call failed: %s"%e
+
+			their_pose = np.array([resp1.x,resp1.y])
+			goal = their_pose + 2.5*np.array([np.cos(resp1.theta),np.sin(resp1.theta)])
+
+			if np.linalg.norm(goal-np.array([x,y]))<.3:
+				print(robot_name+": Would you like to dance, "+follower_name+"?")
+				dance_proposal = String(robot_name)
+				pub_chat.publish(dance_proposal)
 				r_dot = 0
 				theta_dot = 0
-
-				# stall until you build up the courage to ask someone to dance
-				# randomly decide when this leader will go find a partner
-				a = np.random.randint(0,8000)
-				if a == 7:
-					mode = 1
-					print(robot_name+": Okay, I'm feeling brave!")
-
-			# go ask a follower to dance
-			elif mode == 1:
-
-				follower_number=int(robot_name.replace('sphero',""))
-				follower_name = 'sphero' + str(follower_number+1)
-				pub_chat = rospy.Publisher(follower_name+'/chatter', String, queue_size=10)
-
-				rospy.wait_for_service('robot_locator')
-				try:
-					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
-					resp1 = robot_locator(follower_name)
-				except rospy.ServiceException, e:
-					print "Service call failed: %s"%e
-
-				their_pose = np.array([resp1.x,resp1.y])
-				goal = their_pose + 2.5*np.array([np.cos(resp1.theta),np.sin(resp1.theta)])
-
-				if np.linalg.norm(goal-np.array([x,y]))<.3:
-					print(robot_name+": Would you like to dance, "+follower_name+"?")
-					dance_proposal = String(robot_name)
-					pub_chat.publish(dance_proposal)
-					r_dot = 0
-					theta_dot = 0
-					mode = mode+1
-					#print(robot_name+": Time for the next mode: "+str(mode))
-					rate = rospy.Rate(.5) #hz
-				else:
-					# navigate to partner using force model
-					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-
-			elif mode == 2:
-				rate = rospy.Rate(750) #hz
-
-				# navigate to dance floor using force model
-				goal = np.array([1+3*int(robot_name.replace('sphero','')),8])
-
-				if np.linalg.norm(goal-np.array([x,y]))<.3:
-					go_to(robot_name,x,y,-np.pi/2)
-					add_to_mode_counter(int(robot_name.replace('sphero','')))
-					print(robot_name+": Okay, ready to start the dance!")
-					wait_for_next_mode()
-					#print(robot_name+": Time for the next mode: "+str(mode))
-					lin = Vector3(0,0,0)
-					ang = Vector3(0,0,0)
-					glide = Twist(lin,ang)
-					pub_vel.publish(glide)
-					t_0 = time.time()
-				else:
-					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-
-			elif mode == 3:
-
-				# dance with partner and avoid others
-				if dance_state == -1:
-					r_dot = 0
-					theta_dot = 0
-				else:
-
-					if dance_state == 0:
-
-						try:
-							robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
-							resp1 = robot_locator(follower_name)
-						except rospy.ServiceException, e:
-							print "Service call failed: %s"%e
-						their_pose = np.array([resp1.x,resp1.y])
-
-						# make sure to face your partner
-						direction = their_pose-np.array([x,y])
-						th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-						go_to(robot_name,x,y,th)
-
-						rate = rospy.Rate(.5) # hz
-						goal = np.array([x,y]) - 0.5*np.array([np.cos(theta),np.sin(theta)])
-						(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-					elif dance_state == 1:
-						goal = np.array([x,y]) + 0.5*np.array([np.cos(theta),np.sin(theta)])
-						(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-					elif dance_state >= 2 and dance_state < 100:
-						rate = rospy.Rate(2) # hz
-						(r_dot,theta_dot) = (-.5*1.5,-.5)
-					else:
-						rate = rospy.Rate(750) # hz
-						print(robot_name+": Thank you for a lovely dance, "+follower_name+".")
-						dance_end = String('bow')
-						pub_chat.publish(dance_end)
-						mode = 4
-
-					#(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-					dance_state = np.mod(dance_state + 1,16)
-
-			else: 
-				(r_dot,theta_dot) = navigate_toward([x,13],robot_name,follower_name)
-				return
-
-			lin = Vector3(r_dot,0,0)
-			ang = Vector3(0,0,theta_dot)
-
-		else:
-
-			if mode == 0:
-				# wait to go to a partner
-				x_dot = 0
-				y_dot = 0
-
-			elif mode == 1:
-				# navigate to partner using force model
-				x_dot = 30*np.sin(3*t)
-				y_dot = 30*np.cos(3*t)
-
-			elif mode == 2:
-				# navigate to dance floor using force model
-				x_dot = 30*np.sin(3*t)
-				y_dot = 30*np.cos(3*t)
-
+				mode = mode+1
+				#print(robot_name+": Time for the next mode: "+str(mode))
+				rate = rospy.Rate(.5) #hz
 			else:
-				# dance in a circle with partner and avoid others
-				x_dot = 30*np.sin(3*t)
-				y_dot = 30*np.cos(3*t)
+				# navigate to partner using force model
+				(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
 
-			lin = Vector3(x_dot,y_dot,0)
-			ang = Vector3(0,0,0)
+		elif mode == 2:
+			rate = rospy.Rate(750) #hz
+
+			# navigate to dance floor using force model
+			goal = np.array([1+3*int(robot_name.replace('sphero','')),8])
+
+			if np.linalg.norm(goal-np.array([x,y]))<.3:
+				go_to(robot_name,x,y,-np.pi/2)
+				add_to_mode_counter(int(robot_name.replace('sphero','')))
+				print(robot_name+": Okay, ready to start the dance!")
+				wait_for_next_mode()
+				#print(robot_name+": Time for the next mode: "+str(mode))
+				lin = Vector3(0,0,0)
+				ang = Vector3(0,0,0)
+				glide = Twist(lin,ang)
+				pub_vel.publish(glide)
+				t_0 = time.time()
+			else:
+				(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+
+		elif mode == 3:
+
+			# dance with partner and avoid others
+			if dance_state == -1:
+				r_dot = 0
+				theta_dot = 0
+			else:
+
+				if dance_state == 0:
+
+					try:
+						robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+						resp1 = robot_locator(follower_name)
+					except rospy.ServiceException, e:
+						print "Service call failed: %s"%e
+					their_pose = np.array([resp1.x,resp1.y])
+
+					# make sure to face your partner
+					direction = their_pose-np.array([x,y])
+					th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
+					go_to(robot_name,x,y,th)
+
+					rate = rospy.Rate(.5) # hz
+					goal = np.array([x,y]) - 0.5*np.array([np.cos(theta),np.sin(theta)])
+					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+				elif dance_state == 1:
+					goal = np.array([x,y]) + 0.5*np.array([np.cos(theta),np.sin(theta)])
+					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+				elif dance_state >= 2 and dance_state < 100:
+					rate = rospy.Rate(2) # hz
+					(r_dot,theta_dot) = (-.5*1.5,-.5)
+				else:
+					rate = rospy.Rate(750) # hz
+					print(robot_name+": Thank you for a lovely dance, "+follower_name+".")
+					dance_end = String('bow')
+					pub_chat.publish(dance_end)
+					mode = 4
+
+				#(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+				dance_state = np.mod(dance_state + 1,16)
+
+		else: 
+			(r_dot,theta_dot) = navigate_toward([x,13],robot_name,follower_name)
+
+		lin = Vector3(r_dot,0,0)
+		ang = Vector3(0,0,theta_dot)
 
 		glide = Twist(lin,ang)
 		pub_vel.publish(glide)
@@ -371,14 +325,16 @@ def driver(robot_name,robot_number):
 if __name__ == '__main__':
 
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
+	baby_name = 'sphero'+str(baby_number)
+	if baby_number <= rospy.get_param('total_robot_n'):
 
-	while rospy.get_param("setup_complete") == False:
-		time.sleep(1)
+		while rospy.get_param("setup_complete") == False:
+			time.sleep(1)
 
-	try:
-		driver('sphero'+str(baby_number),baby_number)
-		rospy.spin() # same here. Does it matter if it's in driver() or not? - ilse
-	except rospy.ROSInterruptException:
-		pass
+		try:
+			driver('sphero'+str(baby_number),baby_number)
+			rospy.spin() # same here. Does it matter if it's in driver() or not? - ilse
+		except rospy.ROSInterruptException:
+			pass
 
 

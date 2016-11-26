@@ -1,8 +1,5 @@
 <launch>
 
-	<arg name="sim" default="True" />
-	<param name="simulation" type="boolean" value="$(arg sim)" />
-
 	<arg name="n" default="2" />
 	<param name="total_robot_n" type="int" value="$(arg n)" />
 
@@ -23,8 +20,7 @@
 	<node pkg="sphero_ball_sim" name="social_force" type="social_force_service.py" output="screen" />
 	<node pkg="sphero_ball_sim" name="robot_locator" type="robot_location_service.py" output="screen" />
 
-	<!-- launch turtlesim - needs to be manually commented out when running non sim version -->
-	<!-- would be nice to do this from robot_setup.py --> 
+	<!-- launch turtlesim --> 
 	<node pkg="turtlesim" name="turtlesim" type="turtlesim_node"/>  
 
 	<!-- leader and follower robots below. make sure only n of them are uncommented when running launch file -->

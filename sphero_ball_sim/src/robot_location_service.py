@@ -2,7 +2,6 @@
 
 import rospy
 from turtlesim.msg import Pose
-from nav_msgs.msg import Odometry
 from sphero_ball_sim.srv import *
 
 class RobotLocationServer:
@@ -16,10 +15,7 @@ class RobotLocationServer:
 
     for i in range(self.n):
       name = 'sphero'+str(i+1)
-      if rospy.get_param('simulation'):
-        rospy.Subscriber(name + '/pose', Pose, self.pose_callback, name)
-      else:
-        rospy.Subscriber(name + '/odom', Odometry, self.odom_callback, name)
+      rospy.Subscriber(name + '/pose', Pose, self.pose_callback, name)
 
     print "Ready to locate robots."
     rospy.spin()
@@ -34,11 +30,6 @@ class RobotLocationServer:
   def pose_callback(self, data, name):
     """ Used to set the pose of Sphero positions. """
     self.turtle_poses[name] = [data.x, data.y, data.theta]
-
-  def odom_callback(self, data, name):
-    """ Used to set the odometry of Sphero positions. """
-    self.turtle_poses[name][0] = data.pose.pose.position.x
-    self.turtle_poses[name][1] = data.pose.pose.position.y
 
 if __name__ == "__main__":
   RobotLocationServer()
