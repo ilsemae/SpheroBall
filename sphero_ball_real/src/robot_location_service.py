@@ -16,10 +16,7 @@ class RobotLocationServer:
 
     for i in range(self.n):
       name = 'sphero'+str(i+1)
-      if rospy.get_param('simulation'):
-        rospy.Subscriber(name + '/pose', Pose, self.pose_callback, name)
-      else:
-        rospy.Subscriber(name + '/odom', Odometry, self.odom_callback, name)
+      rospy.Subscriber(name + '/odom', Odometry, self.odom_callback, name)
 
     print "Ready to locate robots."
     rospy.spin()

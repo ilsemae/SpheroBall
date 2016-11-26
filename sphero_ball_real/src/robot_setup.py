@@ -12,27 +12,15 @@ class RobotSetup:
     self.n = rospy.get_param('total_robot_n')
     rospy.init_node('robot_setup')
     pub = rospy.Publisher('music', String, queue_size=10)
-    if rospy.get_param('simulation'):
-      rospy.wait_for_service('spawn')
-      self.spawn_sim_spheros()
-    else:
-      self.bt = 0
-      rospy.Subscriber('rosout', Log, self.set_bt_state)
-      self.connect_to_spheros()
+    self.bt = 0
+    rospy.Subscriber('rosout', Log, self.set_bt_state)
+    self.connect_to_spheros()
     rospy.set_param('setup_complete', True)
     raw_input('Press enter to begin the dance.')
     pub.publish(String('begin'))
     raw_input('Press enter to end the dance.')
     pub.publish(String('end'))
     rospy.spin()
-
-  def spawn_sim_spheros(self):
-    for i in range(self.n):
-      name = 'sphero'+str(i+1)
-      color = i%2
-      if i == 1:
-        color = 5
-      rospy.ServiceProxy('spawn', Spawn).call(13, 7, 0, name, color)
 
   def connect_to_spheros(self):
     """ Loops until a Sphero is connected. """

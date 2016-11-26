@@ -30,15 +30,6 @@ def chatter_callback(data):
 	else:
 		print "That would be lovely, "+data.data+"!"
 
-# turtle position callback
-def pose_callback(data):
-	global x
-	global y
-	global theta
-	x = data.x
-	y = data.y
-	theta = float(np.mod(data.theta,2*np.pi)) # bring angle value to within +2*pi
-
 # sphero position callback
 def odom_callback(data):
 	#print(data)
@@ -192,7 +183,7 @@ def smiler(robot_name,smile,goal,leader_name):
 #		th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi) - (5-smile)*np.pi/10
 #		go_to(robot_name,x,y,th)
 
-# main driving function for followers (turtlesim and sphero)
+# main driving function for followers
 def follow(robot_name,robot_number):
 
 	global mode
@@ -205,22 +196,9 @@ def follow(robot_name,robot_number):
 	rate = rospy.Rate(750) # hz
 	rospy.Subscriber(robot_name+'/chatter',String,chatter_callback)
 
-	sim = rospy.get_param("simulation")
-
-	if sim == True:
-		rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
-		p_x = robot_number/1.5+7
-		p_y = 1
-		th = np.pi/2
-
-		while x==0: # wait for published messages to start being read
-			time.sleep(1)
-
-		go_to(robot_name,p_x,p_y,th)
-	else:
-		rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
-		pub_color = rospy.Publisher(robot_name+'/set_color', ColorRGBA, queue_size=10)
-		color = ColorRGBA(100,0,150,0) # maybe the color can be the "smile" variable
+	rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
+	pub_color = rospy.Publisher(robot_name+'/set_color', ColorRGBA, queue_size=10)
+	color = ColorRGBA(100,0,150,0) # maybe the color can be the "smile" variable
 
 	print(robot_name+': ready to be asked to dance!')
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
@@ -230,125 +208,101 @@ def follow(robot_name,robot_number):
 
 	while not rospy.is_shutdown():
 
-		if sim == True:
+		if mode == 0:
+			# wait
+			r_dot = 0
+			theta_dot = 0
+			mode = 1
 
-			if mode == 0:
-				# wait
-				r_dot = 0
-				theta_dot = 0
-				mode = 1
-
-			elif mode == 1:
-				# if a leader gets close, turn toward or away from them
-				leader_name = 'sphero'+str(int(robot_name.replace('sphero',''))-1)
-				rospy.wait_for_service('robot_locator')
-				try:
-					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
-					resp1 = robot_locator(leader_name)
-				except rospy.ServiceException, e:
-					print "Service call failed: %s"%e
-				their_pose = np.array([resp1.x,resp1.y])
-				direction = their_pose-np.array([x,y])
-				if np.linalg.norm(direction) < 3:
-					(r_dot,theta_dot) = smiler(robot_name,smile,np.array([x,y])+np.sign(smile)*direction/np.linalg.norm(direction),leader_name)
-					lin = Vector3(r_dot,0,0)
-					ang = Vector3(0,0,theta_dot)
-					glide = Twist(lin,ang)
-					pub_vel.publish(glide)
-					time.sleep(.5)
-					lin = Vector3(0,0,0)
-					ang = Vector3(0,0,0)
-					glide = Twist(lin,ang)
-					pub_vel.publish(glide)
-					if smile > 0:
-						go_to(robot_name,x,y,theta + np.pi/7)
-						go_to(robot_name,x,y,theta - np.pi/7)
-						go_to(robot_name,x,y,theta + np.pi/7)
-						go_to(robot_name,x,y,theta - np.pi/7)
-						go_to(robot_name,x,y,theta + np.pi/7)
-						time.sleep(1.5)
-					elif smile < 0:
-						go_to(robot_name,x,y,theta + np.pi/4)
-						time.sleep(4.5)
-					else:
-						time.sleep(3.5)
-					mode = 2
-
-			elif mode == 2:
-				# navigate to dance floor using force model
-				try:
-					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
-					resp1 = robot_locator(leader_name)
-				except rospy.ServiceException, e:
-					print "Service call failed: %s"%e
-				their_pose = np.array([resp1.x,resp1.y])
-				goal = their_pose + np.array([0,-1.5])
-				if np.linalg.norm(goal-np.array([x,y]))<.3:
-					go_to(robot_name,x,y,np.pi/2)
-					lin = Vector3(0,0,0)
-					ang = Vector3(0,0,0)
-					glide = Twist(lin,ang)
-					pub_vel.publish(glide)
-					add_to_mode_counter(int(robot_name.replace('sphero','')))
-					wait_for_next_mode()
+		elif mode == 1:
+			# if a leader gets close, turn toward or away from them
+			leader_name = 'sphero'+str(int(robot_name.replace('sphero',''))-1)
+			rospy.wait_for_service('robot_locator')
+			try:
+				robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+				resp1 = robot_locator(leader_name)
+			except rospy.ServiceException, e:
+				print "Service call failed: %s"%e
+			their_pose = np.array([resp1.x,resp1.y])
+			direction = their_pose-np.array([x,y])
+			if np.linalg.norm(direction) < 3:
+				(r_dot,theta_dot) = smiler(robot_name,smile,np.array([x,y])+np.sign(smile)*direction/np.linalg.norm(direction),leader_name)
+				lin = Vector3(r_dot,0,0)
+				ang = Vector3(0,0,theta_dot)
+				glide = Twist(lin,ang)
+				pub_vel.publish(glide)
+				time.sleep(.5)
+				lin = Vector3(0,0,0)
+				ang = Vector3(0,0,0)
+				glide = Twist(lin,ang)
+				pub_vel.publish(glide)
+				if smile > 0:
+					go_to(robot_name,x,y,theta + np.pi/7)
+					go_to(robot_name,x,y,theta - np.pi/7)
+					go_to(robot_name,x,y,theta + np.pi/7)
+					go_to(robot_name,x,y,theta - np.pi/7)
+					go_to(robot_name,x,y,theta + np.pi/7)
+					time.sleep(1.5)
+				elif smile < 0:
+					go_to(robot_name,x,y,theta + np.pi/4)
+					time.sleep(4.5)
 				else:
-					(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
+					time.sleep(3.5)
+				mode = 2
 
-			elif mode == 3:
-				global dance_begun
-				# dance with partner and avoid others
-				try:
-					robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
-					resp1 = robot_locator(leader_name)
-				except rospy.ServiceException, e:
-					print "Service call failed: %s"%e
-				their_pose = np.array([resp1.x,resp1.y])
-				# make sure to face your partner
-				direction = their_pose-np.array([x,y])
-				th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-				if np.linalg.norm(th-theta) > 0.2:
-					go_to(robot_name,x,y,th)
-				# stay a certain distance in front of your partner
-				goal = their_pose - 1.5*direction/np.linalg.norm(direction)
-				if np.linalg.norm(goal-np.array([x,y])) < .3:
-					(r_dot,theta_dot) = (0,0)
-					if smile > 0 and dance_begun == False:
-						go_to(robot_name,x,y,theta + np.pi/7)
-						go_to(robot_name,x,y,theta - np.pi/7)
-				else:
-					dance_begun = True
-					(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
-
+		elif mode == 2:
+			# navigate to dance floor using force model
+			try:
+				robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+				resp1 = robot_locator(leader_name)
+			except rospy.ServiceException, e:
+				print "Service call failed: %s"%e
+			their_pose = np.array([resp1.x,resp1.y])
+			goal = their_pose + np.array([0,-1.5])
+			if np.linalg.norm(goal-np.array([x,y]))<.3:
+				go_to(robot_name,x,y,np.pi/2)
+				lin = Vector3(0,0,0)
+				ang = Vector3(0,0,0)
+				glide = Twist(lin,ang)
+				pub_vel.publish(glide)
+				add_to_mode_counter(int(robot_name.replace('sphero','')))
+				wait_for_next_mode()
 			else:
-				(r_dot,theta_dot) = navigate_toward([x,1],robot_name,leader_name)
+				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
-			lin = Vector3(r_dot,0,0)
-			ang = Vector3(0,0,theta_dot)
+		elif mode == 3:
+			global dance_begun
+			# dance with partner and avoid others
+			try:
+				robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
+				resp1 = robot_locator(leader_name)
+			except rospy.ServiceException, e:
+				print "Service call failed: %s"%e
+			their_pose = np.array([resp1.x,resp1.y])
+			# make sure to face your partner
+			direction = their_pose-np.array([x,y])
+			th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
+			if np.linalg.norm(th-theta) > 0.2:
+				go_to(robot_name,x,y,th)
+			# stay a certain distance in front of your partner
+			goal = their_pose - 1.5*direction/np.linalg.norm(direction)
+			if np.linalg.norm(goal-np.array([x,y])) < .3:
+				(r_dot,theta_dot) = (0,0)
+				if smile > 0 and dance_begun == False:
+					go_to(robot_name,x,y,theta + np.pi/7)
+					go_to(robot_name,x,y,theta - np.pi/7)
+			else:
+				dance_begun = True
+				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 		else:
+			(r_dot,theta_dot) = navigate_toward([x,1],robot_name,leader_name)
 
-			if mode == 0:
-				# wait to go to a partner
-				x_dot = 0
-				y_dot = 0
+		x_dot = r_dot*np.cos(theta_dot)
+		y_dot = r_dot*np.sin(theta_dot)
 
-			elif mode == 1:
-				# wait to go to a partner
-				x_dot = 0
-				y_dot = 0
-
-			elif mode == 2:
-				# navigate to dance floor using force model
-				x_dot = 30*np.sin(3*t)
-				y_dot = 30*np.cos(3*t)
-
-			else:
-				# dance in a circle with partner and avoid others
-				x_dot = 30*np.sin(3*t)
-				y_dot = 30*np.cos(3*t)
-
-			lin = Vector3(x_dot,y_dot,0)
-			ang = Vector3(0,0,0)
+		lin = Vector3(x_dot,y_dot,0)
+		ang = Vector3(0,0,0)
 
 		stumble = Twist(lin,ang)
 		pub_vel.publish(stumble)
