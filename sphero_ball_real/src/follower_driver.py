@@ -7,8 +7,6 @@ import sys
 from std_msgs.msg import String, ColorRGBA
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
-from turtlesim.srv import Kill, Spawn, SetPen
-from turtlesim.msg import Pose
 from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
@@ -312,22 +310,23 @@ if __name__ == '__main__':
 
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
 	baby_name = 'sphero'+str(baby_number)
+	if baby_number <= rospy.get_param('total_robot_n'):
 
-	# defines how happy a robot is about dancing. All but sphero2 will be neutral (0)
-	# sphero2's value will be varied for our experment. -5 = very unhappy, 5 = very happy
-	if baby_name == 'sphero2':
-		smile = 5
-	else:
-		smile = 0
+		# defines how happy a robot is about dancing. All but sphero2 will be neutral (0)
+		# sphero2's value will be varied for our experment. -5 = very unhappy, 5 = very happy
+		if baby_name == 'sphero2':
+			smile = 5
+		else:
+			smile = 0
 
 
-	while rospy.get_param("setup_complete") == False:
-		time.sleep(1)
+		while rospy.get_param("setup_complete") == False:
+			time.sleep(1)
 
-	try:
-		follow(baby_name,baby_number)
-		rospy.spin() # not sure why I put this here. Perhaps it should go inside follow()
-	except rospy.ROSInterruptException:
-		pass
+		try:
+			follow(baby_name,baby_number)
+			rospy.spin() # not sure why I put this here. Perhaps it should go inside follow()
+		except rospy.ROSInterruptException:
+			pass
 
-	
+		

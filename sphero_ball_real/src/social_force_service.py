@@ -3,7 +3,7 @@
 import rospy
 import time
 import numpy as np
-from turtlesim.msg import Pose
+from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
 class SocialForceServer:
@@ -18,7 +18,7 @@ class SocialForceServer:
 
     for i in range(self.n):
       name = 'sphero'+str(i+1)
-      rospy.Subscriber(name + '/pose', Pose, self.t_pose_callback, name)
+      rospy.Subscriber(name + '/pose', Odometry, self.pose_callback, name)
 
     print "Ready to calculate social forces."
     rospy.spin()
@@ -27,9 +27,9 @@ class SocialForceServer:
     force = self.get_net_force(req.name, req.partner_name, req.goal_x, req.goal_y)
     return SocialForceResponse(force[0],force[1])
 
-  def t_pose_callback(self, data, name):
+  def pose_callback(self, data, name):
     """ Used to set the pose for Sphero positions. """
-    self.robot_poses[name] = [data.x, data.y]
+    self.robot_poses[name] = [data.pose.pose.position.x, data.pose.pose.position.y]
 
   def get_net_force(self, robot_name, partner_name, goal_x, goal_y):
     x,y = self.robot_poses[robot_name]

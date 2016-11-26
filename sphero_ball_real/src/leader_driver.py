@@ -8,8 +8,6 @@ import time
 from std_msgs.msg import String, ColorRGBA
 from geometry_msgs.msg import Twist
 from geometry_msgs.msg import Vector3
-from turtlesim.srv import Spawn, SetPen
-from turtlesim.msg import Color, Pose
 from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
@@ -323,14 +321,16 @@ def driver(robot_name,robot_number):
 if __name__ == '__main__':
 
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
+	
+	if baby_number <= rospy.get_param('total_robot_n'):
 
-	while rospy.get_param("setup_complete") == False:
-		time.sleep(1)
+		while rospy.get_param("setup_complete") == False:
+			time.sleep(1)
 
-	try:
-		driver('sphero'+str(baby_number),baby_number)
-		rospy.spin() # same here. Does it matter if it's in driver() or not? - ilse
-	except rospy.ROSInterruptException:
-		pass
+		try:
+			driver('sphero'+str(baby_number),baby_number)
+			rospy.spin() # same here. Does it matter if it's in driver() or not? - ilse
+		except rospy.ROSInterruptException:
+			pass
 
 

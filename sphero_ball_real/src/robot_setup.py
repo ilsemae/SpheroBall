@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-from turtlesim.srv import Spawn
 from std_msgs.msg import String
 from rosgraph_msgs.msg import Log
 from subprocess import Popen

@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-from turtlesim.msg import Pose
 from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
