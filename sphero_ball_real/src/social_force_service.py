@@ -18,7 +18,7 @@ class SocialForceServer:
     # Create a pose subscriber for each robot.
     for i in range(self.n):
       name = 'sphero'+str(i+1)
-      rospy.Subscriber(name + '/pose', Odometry, self.pose_callback, name)
+      rospy.Subscriber(name + '/odom', Odometry, self.pose_callback, name)
     # Print a ready message and then spin forever.
     print "Ready to calculate social forces."
     rospy.spin()
