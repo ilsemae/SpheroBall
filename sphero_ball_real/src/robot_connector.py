@@ -11,8 +11,8 @@ special = 1 # index of the special Sphero
 
 colors = (
   ColorRGBA(255, 128, 23, 0), # leader
-  ColorRGBA(100, 3, 100, 0),  # follower
-  ColorRGBA(0, 200, 90, 0)    # special
+  ColorRGBA(150, 6, 150, 0),  # follower
+  ColorRGBA(0, 200, 90, 0)    # special follower
 )
 
 class RobotConnector:
