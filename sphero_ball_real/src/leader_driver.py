@@ -13,15 +13,15 @@ from sphero_ball_real.srv import *
 
 x_init = 9999999
 y_init = 9999999
-theta_init = 9999999
+#theta_init = 9999999
 
 x0 = 0
-y0 = 10
-theta0 = 0
+y0 = 5
+#theta0 = 0
 
 x = 9999999
 y = 9999999
-theta = 9999999
+#theta = 9999999
 
 t_0 = 0 # to hold starting time of dance
 t_dance = 20 # length of dance in seconds
@@ -32,21 +32,21 @@ mode = -1 # 0 = waiting to dance, 1 = navigating to a partner, 2 = leading partn
 def odom_callback(data):
 	global x
 	global y
-	global theta
-	global x
-	global y
-	global theta
+	#global theta
+	global x0
+	global y0
+	#global theta0
 	global x_init
 	global y_init
-	global theta_init
+	#global theta_init
 
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-		theta_init = data.pose.pose.orientation.w
+	#	theta_init = data.pose.pose.orientation.w
 	x = data.pose.pose.position.x - x_init + x0
 	y = data.pose.pose.position.y - y_init + y0
-	theta = data.pose.pose.orientation.w - theta_init + theta0
+	#theta = data.pose.pose.orientation.w - theta_init + theta0
 
 # used to begin and end the dance
 def music_callback(data):
@@ -126,11 +126,9 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	rate.sleep()
 
 def navigate_toward(goal,robot_name,follower_name):
-	global x
-	global y
-	global theta
-	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
+
 	rospy.wait_for_service('social_force')
+
 	try:
 		social_force = rospy.ServiceProxy('social_force', SocialForce)
 		resp2 = social_force(robot_name,goal[0],goal[1],follower_name)
@@ -138,55 +136,10 @@ def navigate_toward(goal,robot_name,follower_name):
 		print "Service call failed: %s"%e
 
 	net_force = np.array([resp2.x,resp2.y])
-	force_angle = np.arctan2(net_force[1],net_force[0])
-	#print(turtle_name+": Ok! My force angle is "+str(force_angle))
 
-	force_angle = np.mod(force_angle,2*np.pi) # bring angle value to within +2*pi
-	angle_difference = np.mod(force_angle - theta,2*np.pi)
-	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
+	r_dot = 40
+	theta_dot = np.mod(np.arctan2(net_force[1],net_force[0]),2*np.pi)
 
-	speed_lin = 40
-	speed_ang = speed_lin/2
-
-	# if force angle points in front of robot, turn and move forward at the same time
-	if angle_difference < np.pi/2 :
-		if angle_difference < .1:
-			r_dot = speed_lin
-			theta_dot = 0
-		else:
-			r_dot = speed_lin
-			theta_dot = speed_ang
-	elif angle_difference > 3*np.pi/2: 
-		if angle_difference > 2*np.pi-.1:
-			r_dot = speed_lin
-			theta_dot = 0
-		else:
-			r_dot = speed_lin
-			theta_dot = -speed_ang
-	# otherwise, either back up if goal is close, or spin and then move toward goal
-	else:
-		i = 1
-		if abs(angle_difference) < np.pi:
-			i = -1
-		if distance_to_goal < 1.2:
-			if abs(angle_difference - np.pi) < .1:
-				r_dot = -speed_lin
-				theta_dot = 0
-			else:
-				r_dot = -speed_lin
-				theta_dot = i*speed_ang
-		else:
-			r_dot = 0
-			theta_dot = -5*i
-			lin = Vector3(r_dot,0,0)
-			ang = Vector3(0,0,theta_dot)
-			while abs(angle_difference)>.05:
-				#print(turtle_name+": Ok! My angle error is "+str(angle_difference)+", so I am spinning!")
-				angle_difference = force_angle-theta
-				stumble = Twist(lin,ang)
-				pub_vel.publish(stumble)
-			r_dot = speed_lin
-			theta_dot = 0
 	return (r_dot,theta_dot)
 
 
@@ -196,6 +149,10 @@ def driver(robot_name,robot_number):
 	global mode
 	global x
 	global y
+	global x_init
+	global y_init
+	global x0
+	global y0
 	global theta
 	global dance_state
 	global t_0
@@ -207,9 +164,13 @@ def driver(robot_name,robot_number):
 	rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
 
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
+	pub_trans = rospy.Publisher(robot_name+'/transform', Vector3, queue_size=10)
 
 	while x == 9999999:
 		time.sleep(1)
+	
+	pub_trans.publish(Vector3(-x_init+x0,-y_init+y0,0))		
+
 	print(robot_name+': ready to go find a dance partner!  I am at position: ('+str(x)+','+str(y)+').')
 	add_to_mode_counter(int(robot_name.replace('sphero','')))
 	wait_for_next_mode()
@@ -246,7 +207,7 @@ def driver(robot_name,robot_number):
 				print "Service call failed: %s"%e
 
 			their_pose = np.array([resp1.x,resp1.y])
-			goal = their_pose + 2.5*np.array([np.cos(resp1.theta),np.sin(resp1.theta)])
+			goal = their_pose + .5*np.array([0,1])
 
 			if np.linalg.norm(goal-np.array([x,y]))<.3:
 				print(robot_name+": Would you like to dance, "+follower_name+"?")
@@ -260,6 +221,12 @@ def driver(robot_name,robot_number):
 			else:
 				# navigate to partner using force model
 				(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+
+			if time.time() % 1 > .9:
+				#print "I am at " + str([x,y]) + "."
+				#print "They are at " + str(their_pose) + "."
+				#print "I'm going to " + str(goal) + "!!"
+				print "My force angle is " + str (theta_dot) + "."
 
 		elif mode == 2:
 			rate = rospy.Rate(750) #hz
@@ -341,7 +308,7 @@ if __name__ == '__main__':
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
 	baby_name = 'sphero'+str(baby_number)
 	rospy.init_node(baby_name+'_driver', anonymous=True)
-	x0 = baby_number*3+1
+	x0 = baby_number+1
 
 	if baby_number <= rospy.get_param('total_robot_n'):
 

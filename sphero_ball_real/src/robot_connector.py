@@ -7,11 +7,11 @@ from std_msgs.msg import Int32, ColorRGBA
 from rosgraph_msgs.msg import Log
 from subprocess import Popen
 
-special = 1 # index of the special Sphero
+special = 2 # index of the special Sphero
 
 colors = (
   ColorRGBA(255, 128, 23, 0), # leader
-  ColorRGBA(150, 6, 150, 0),  # follower
+  ColorRGBA(200, 10, 200, 0),  # follower
   ColorRGBA(0, 200, 90, 0)    # special follower
 )
 
@@ -32,8 +32,8 @@ class RobotConnector:
     # Ensure two Spheros do not have the same name.
     if i in self.processes: return 0
     # Determine the Sphero's name and color.
-    name = 'sphero' + str(i+1)
-    color = colors[-1] if i == special else colors[i%2]
+    name = 'sphero' + str(i)
+    color = colors[-1] if i == special else colors[(i-1)%2]
     # Start a new sphero.py process to begin connecting.
     p = Popen(['rosrun', 'sphero_node', 'sphero.py', '__ns:=' + name])
     # Spin our wheels while connecting.

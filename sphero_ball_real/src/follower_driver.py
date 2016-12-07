@@ -12,15 +12,15 @@ from sphero_ball_real.srv import *
 
 x_init = 9999999
 y_init = 9999999
-theta_init = 9999999
+#theta_init = 9999999
 
 x0 = 0
 y0 = 1
-theta0 = 0
+#theta0 = 0
 
 x = 9999999
 y = 9999999
-theta = 9999999
+#theta = 9999999
 
 dance_begun = False
 
@@ -39,13 +39,13 @@ def chatter_callback(data):
 def odom_callback(data):
 	global x
 	global y
-	global theta
-	global x
-	global y
-	global theta
+	#global theta
+	global x0
+	global y0
+	#global theta0
 	global x_init
 	global y_init
-	global theta_init
+	#global theta_init
 
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
@@ -53,7 +53,7 @@ def odom_callback(data):
 		theta_init = data.pose.pose.orientation.w
 	x = data.pose.pose.position.x - x_init + x0
 	y = data.pose.pose.position.y - y_init + y0
-	theta = data.pose.pose.orientation.w - theta_init + theta0
+	#theta = data.pose.pose.orientation.w - theta_init + theta0
 
 def add_to_mode_counter(i):
 
@@ -216,8 +216,12 @@ def follow(robot_name,robot_number):
 	rospy.Subscriber(robot_name+'/chatter',String,chatter_callback)
 	rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
 
+	pub_trans = rospy.Publisher(robot_name+'/transform', Vector3, queue_size=10)	
+
 	while x == 9999999:
 		time.sleep(.2)
+
+	pub_trans.publish(Vector3(-x_init+x0,-y_init+y0,0))		
 
 	print(robot_name+': ready to be asked to dance! I am at position: ('+str(x)+','+str(y)+").")
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
@@ -330,7 +334,7 @@ def follow(robot_name,robot_number):
 if __name__ == '__main__':
 
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
-	x0 = baby_number*2+3
+	x0 = baby_number
 	baby_name = 'sphero'+str(baby_number)
 	rospy.init_node(baby_name+'_driver', anonymous=True)
 
