@@ -1,26 +1,20 @@
 #!/usr/bin/env python
 
 import rospy
-from std_msgs.msg import String, ColorRGBA
+import numpy as np
+import time
+import sys
 from rosgraph_msgs.msg import Log
 from subprocess import Popen
-from nav_msgs.msg import Odometry
 
 class RobotSetup:
 
 	def __init__(self):
-		self.n = rospy.get_param('total_robot_n')
+		self.n = 1
 		rospy.init_node('robot_setup')
-		pub = rospy.Publisher('music', String, queue_size=10)
-		#self.bt = 0
-		#rospy.Subscriber('rosout', Log, self.set_bt_state)
-		#self.connect_to_spheros()
-		rospy.set_param('setup_complete', True)
-		raw_input('Press enter to begin the dance.')
-		pub.publish(String('begin'))
-		raw_input('Press enter to end the dance.')
-		pub.publish(String('end'))
-		rospy.spin()
+		self.bt = 0
+		rospy.Subscriber('rosout', Log, self.set_bt_state)
+		self.connect_to_spheros()
 
 	def connect_to_spheros(self):
 		""" Loops until a Sphero is connected. """
@@ -28,7 +22,7 @@ class RobotSetup:
 		while i < self.n:
 			self.bt = 0
 			# Give the Sphero a unique name.
-			name = 'sphero'+str(i+1)
+			name = 'sphero'+str(sys.argv[1])
 			# Start a new sphero.py process to begin connecting.
 			p = Popen(['rosrun', 'sphero_node', 'sphero.py', '__ns:=' + name])
 			# Spin our wheels while connecting.
@@ -50,7 +44,7 @@ class RobotSetup:
 		elif "Failed to connect to Sphero." in log.msg:
 			self.bt = -1
 
+
 if __name__ == '__main__':
-	
-	RobotSetup()
-	
+
+	RobotSetup()		

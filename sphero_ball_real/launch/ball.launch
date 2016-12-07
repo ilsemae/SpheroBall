@@ -15,7 +15,7 @@
 	<param name="mode_checker_8" type="int" value="0" />
 
 	<node pkg="sphero_ball_real" name="spheros_connector" type="robot_setup.py" output="screen" />
-	<param name="setup_complete" type="boolean" value="False" />
+	<param name="setup_complete" type="boolean" value="True" />
 
 	<node pkg="sphero_ball_real" name="social_force" type="social_force_service.py" output="screen" />
 	<node pkg="sphero_ball_real" name="robot_locator" type="robot_location_service.py" output="screen" />

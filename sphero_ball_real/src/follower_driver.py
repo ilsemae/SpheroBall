@@ -10,10 +10,17 @@ from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
+x_init = 9999999
+y_init = 9999999
+theta_init = 9999999
 
-x = 0
-y = 0
-theta = 0
+x0 = 0
+y0 = 1
+theta0 = 0
+
+x = 9999999
+y = 9999999
+theta = 9999999
 
 dance_begun = False
 
@@ -30,8 +37,23 @@ def chatter_callback(data):
 
 # sphero position callback
 def odom_callback(data):
-	#print(data)
-	p=data
+	global x
+	global y
+	global theta
+	global x
+	global y
+	global theta
+	global x_init
+	global y_init
+	global theta_init
+
+	if x_init == 9999999:
+		x_init = data.pose.pose.position.x
+		y_init = data.pose.pose.position.y
+		theta_init = data.pose.pose.orientation.w
+	x = data.pose.pose.position.x - x_init + x0
+	y = data.pose.pose.position.y - y_init + y0
+	theta = data.pose.pose.orientation.w - theta_init + theta0
 
 def add_to_mode_counter(i):
 
@@ -124,7 +146,7 @@ def navigate_toward(goal,robot_name,leader_name):
 	angle_difference = np.mod(force_angle - theta,2*np.pi)
 	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
 
-	speed_lin = 2
+	speed_lin = 40
 	speed_ang = speed_lin/2
 
 	# if force angle points in front of robot, turn and move forward at the same time
@@ -190,15 +212,14 @@ def follow(robot_name,robot_number):
 	global theta
 	global smile
 
-	rospy.init_node(robot_name+'_driver', anonymous=True)
 	rate = rospy.Rate(750) # hz
 	rospy.Subscriber(robot_name+'/chatter',String,chatter_callback)
-
 	rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
-	pub_color = rospy.Publisher(robot_name+'/set_color', ColorRGBA, queue_size=10)
-	color = ColorRGBA(100,0,150,0) # maybe the color can be the "smile" variable
 
-	print(robot_name+': ready to be asked to dance!')
+	while x == 9999999:
+		time.sleep(.2)
+
+	print(robot_name+': ready to be asked to dance! I am at position: ('+str(x)+','+str(y)+").")
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
 	add_to_mode_counter(int(robot_name.replace('sphero','')))
 	wait_for_next_mode()
@@ -309,7 +330,10 @@ def follow(robot_name,robot_number):
 if __name__ == '__main__':
 
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
+	x0 = baby_number*2+3
 	baby_name = 'sphero'+str(baby_number)
+	rospy.init_node(baby_name+'_driver', anonymous=True)
+
 	if baby_number <= rospy.get_param('total_robot_n'):
 
 		# defines how happy a robot is about dancing. All but sphero2 will be neutral (0)
@@ -318,7 +342,6 @@ if __name__ == '__main__':
 			smile = 5
 		else:
 			smile = 0
-
 
 		while rospy.get_param("setup_complete") == False:
 			time.sleep(1)

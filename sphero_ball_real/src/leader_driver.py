@@ -11,9 +11,17 @@ from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
-x = 0
-y = 0
-theta = 0
+x_init = 9999999
+y_init = 9999999
+theta_init = 9999999
+
+x0 = 0
+y0 = 10
+theta0 = 0
+
+x = 9999999
+y = 9999999
+theta = 9999999
 
 t_0 = 0 # to hold starting time of dance
 t_dance = 20 # length of dance in seconds
@@ -25,9 +33,20 @@ def odom_callback(data):
 	global x
 	global y
 	global theta
-	x = data.pose.pose.position.x
-	y = data.pose.pose.position.y
-	theta = float(np.mod(data.pose.pose.orientation.w,2*np.pi)) # bring angle value to within +2*pi
+	global x
+	global y
+	global theta
+	global x_init
+	global y_init
+	global theta_init
+
+	if x_init == 9999999:
+		x_init = data.pose.pose.position.x
+		y_init = data.pose.pose.position.y
+		theta_init = data.pose.pose.orientation.w
+	x = data.pose.pose.position.x - x_init + x0
+	y = data.pose.pose.position.y - y_init + y0
+	theta = data.pose.pose.orientation.w - theta_init + theta0
 
 # used to begin and end the dance
 def music_callback(data):
@@ -126,7 +145,7 @@ def navigate_toward(goal,robot_name,follower_name):
 	angle_difference = np.mod(force_angle - theta,2*np.pi)
 	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
 
-	speed_lin = 2
+	speed_lin = 40
 	speed_ang = speed_lin/2
 
 	# if force angle points in front of robot, turn and move forward at the same time
@@ -182,17 +201,16 @@ def driver(robot_name,robot_number):
 	global t_0
 	global t_dance
 
-	rospy.init_node(robot_name+'_driver', anonymous=True)
 	rate = rospy.Rate(750) # hz
 
 	rospy.Subscriber('music', String, music_callback)
-
 	rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
-	pub_color = rospy.Publisher(robot_name+'/set_color', ColorRGBA, queue_size=10)
-	color = ColorRGBA(100,30,0,0)
 
-	print(robot_name+': ready to go find a dance partner!')
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
+
+	while x == 9999999:
+		time.sleep(1)
+	print(robot_name+': ready to go find a dance partner!  I am at position: ('+str(x)+','+str(y)+').')
 	add_to_mode_counter(int(robot_name.replace('sphero','')))
 	wait_for_next_mode()
 	#print(robot_name+": Time for the next mode: "+str(mode))
@@ -321,7 +339,10 @@ def driver(robot_name,robot_number):
 if __name__ == '__main__':
 
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
-	
+	baby_name = 'sphero'+str(baby_number)
+	rospy.init_node(baby_name+'_driver', anonymous=True)
+	x0 = baby_number*3+1
+
 	if baby_number <= rospy.get_param('total_robot_n'):
 
 		while rospy.get_param("setup_complete") == False:
