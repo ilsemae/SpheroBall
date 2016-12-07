@@ -55,6 +55,7 @@ find_package(catkin REQUIRED
    FILES
    SocialForce.srv
    RobotLocator.srv
+   Connector.srv
  )
 
 ## Generate actions in the 'action' folder
