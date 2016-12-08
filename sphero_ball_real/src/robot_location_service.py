@@ -40,8 +40,11 @@ class RobotLocationServer:
 
 	def pose_callback(self, data, name):
 		""" Used to set the pose for Sphero positions. """
-		self.robot_poses[name][0] = data.pose.pose.position.x + self.robot_transforms[name][0]
-		self.robot_poses[name][1] = data.pose.pose.position.y + self.robot_transforms[name][1]
+		# initial position of robots in our reference frame
+		x0 = int(name.replace('sphero','')) + 1
+		y0 = 3*(int(name.replace('sphero','')) % 2) + 1  # 1 for even spheros, 4 for odd
+		self.robot_poses[name][0] = -(data.pose.pose.position.x - self.robot_transforms[name][0]) + x0
+		self.robot_poses[name][1] = -(data.pose.pose.position.y - self.robot_transforms[name][1]) + y0
 
 if __name__ == "__main__":
 	RobotLocationServer()

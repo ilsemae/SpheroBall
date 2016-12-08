@@ -11,17 +11,9 @@ from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
-x_init = 9999999
-y_init = 9999999
-#theta_init = 9999999
-
-x0 = 0
-y0 = 5
-#theta0 = 0
-
-x = 9999999
-y = 9999999
-#theta = 9999999
+[x,y] = [9999999,9999999]
+[x0,y0] = [0,4]
+[x_init,y_init] = [9999999,9999999]
 
 t_0 = 0 # to hold starting time of dance
 t_dance = 20 # length of dance in seconds
@@ -30,23 +22,15 @@ mode = -1 # 0 = waiting to dance, 1 = navigating to a partner, 2 = leading partn
 
 # sphero position callback
 def odom_callback(data):
-	global x
-	global y
-	#global theta
-	global x0
-	global y0
-	#global theta0
-	global x_init
-	global y_init
-	#global theta_init
+	global x, y
+	global x0, y0
+	global x_init, y_init
 
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-	#	theta_init = data.pose.pose.orientation.w
-	x = data.pose.pose.position.x - x_init + x0
-	y = data.pose.pose.position.y - y_init + y0
-	#theta = data.pose.pose.orientation.w - theta_init + theta0
+	x = -(data.pose.pose.position.x - x_init) + x0
+	y = -(data.pose.pose.position.y - y_init) + y0
 
 # used to begin and end the dance
 def music_callback(data):
@@ -79,46 +63,28 @@ def wait_for_next_mode():
 		rospy.set_param('mode_checker_'+str(i),0)
 
 # used for setup - no social nav involved
-def go_to(robot_name,pose_x,pose_y,angle):
+def go_to(robot_name,pose_x,pose_y):
 
-	global x
-	global y
-	global theta
-
+	global x, y
 	pub = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
 	rate = rospy.Rate(750) #hz
 
 	goal_pose = np.array([pose_x,pose_y])
 	current_pose = np.array([x,y])
 
-	direction = goal_pose-current_pose
-	goal_angle = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-	i = np.sign(goal_angle-theta)
-	if abs(goal_angle-theta) > np.pi:
-		i = -i
-	ang = Vector3(0,0,2*i)
-	lin = Vector3(0,0,0)
-	while abs(goal_angle-theta)>.01 and np.linalg.norm(direction) != 0:
-		stumble = Twist(lin,ang)
-		pub.publish(stumble)
-		rate.sleep()
+	displacement = goal_pose-current_pose
+	direction = displacement/np.linalg.norm(displacement)
+
 	ang = Vector3(0,0,0)
-	lin = Vector3(7,0,0)
-	while np.linalg.norm(goal_pose-current_pose)>.1 and np.linalg.norm(direction) != 0:
+	lin = Vector3(direction[0],direction[1],0)
+
+	while np.linalg.norm(displacement) > 0.02:
 		current_pose = np.array([x,y])
+		displacement = goal_pose-current_pose
 		stumble = Twist(lin,ang)
 		pub.publish(stumble)
 		rate.sleep()
-	goal_angle = float(np.mod(angle,2*np.pi))
-	i = np.sign(goal_angle-theta)
-	if abs(goal_angle-theta) > np.pi:
-		i = -i
-	ang = Vector3(0,0,2*i)
-	lin = Vector3(0,0,0)
-	while abs(theta-goal_angle)>.1:
-		stumble = Twist(lin,ang)
-		pub.publish(stumble)
-		rate.sleep()
+
 	ang = Vector3(0,0,0)
 	lin = Vector3(0,0,0)
 	stumble = Twist(lin,ang)
@@ -138,25 +104,21 @@ def navigate_toward(goal,robot_name,follower_name):
 	net_force = np.array([resp2.x,resp2.y])
 
 	r_dot = 40
-	theta_dot = np.mod(np.arctan2(net_force[1],net_force[0]),2*np.pi)
+	net_direction = net_force/np.linalg.norm(net_force)
 
-	return (r_dot,theta_dot)
+	return r_dot*net_direction
 
 
 # main driving function for leader
 def driver(robot_name,robot_number):
 
+	global x, y
+	global x0, y0
+	global x_init, y_init
+
 	global mode
-	global x
-	global y
-	global x_init
-	global y_init
-	global x0
-	global y0
-	global theta
 	global dance_state
-	global t_0
-	global t_dance
+	global t_0, t_dance
 
 	rate = rospy.Rate(750) # hz
 
@@ -169,7 +131,7 @@ def driver(robot_name,robot_number):
 	while x == 9999999:
 		time.sleep(1)
 	
-	pub_trans.publish(Vector3(-x_init+x0,-y_init+y0,0))		
+	pub_trans.publish(Vector3(x_init,y_init,0))		
 
 	print(robot_name+': ready to go find a dance partner!  I am at position: ('+str(x)+','+str(y)+').')
 	add_to_mode_counter(int(robot_name.replace('sphero','')))
@@ -182,8 +144,8 @@ def driver(robot_name,robot_number):
 		
 		if mode == 0:
 
-			r_dot = 0
-			theta_dot = 0
+			x_dot = 0
+			y_dot = 0
 
 			# stall until you build up the courage to ask someone to dance
 			# randomly decide when this leader will go find a partner
@@ -207,26 +169,27 @@ def driver(robot_name,robot_number):
 				print "Service call failed: %s"%e
 
 			their_pose = np.array([resp1.x,resp1.y])
-			goal = their_pose + .5*np.array([0,1])
+			goal = their_pose + np.array([0,.5])
 
-			if np.linalg.norm(goal-np.array([x,y]))<.3:
+			if np.linalg.norm(goal-np.array([x,y])) < .02:
 				print(robot_name+": Would you like to dance, "+follower_name+"?")
 				dance_proposal = String(robot_name)
 				pub_chat.publish(dance_proposal)
-				r_dot = 0
-				theta_dot = 0
+				x_dot = 0
+				y_dot = 0
 				mode = mode+1
 				#print(robot_name+": Time for the next mode: "+str(mode))
 				rate = rospy.Rate(.5) #hz
 			else:
 				# navigate to partner using force model
-				(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+				[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
 
-			if time.time() % 1 > .9:
-				#print "I am at " + str([x,y]) + "."
-				#print "They are at " + str(their_pose) + "."
-				#print "I'm going to " + str(goal) + "!!"
-				print "My force angle is " + str (theta_dot) + "."
+			if time.time() % 1 > .99:
+				print "-----------------------------------------------"
+				print "I am at " + str([x,y]) + "."
+				print "They are at " + str(their_pose) + "."
+				print "I'm going to " + str(goal) + "."
+				print "My velocity is " + str ([x_dot,y_dot]) + "."
 
 		elif mode == 2:
 			rate = rospy.Rate(750) #hz
@@ -235,7 +198,6 @@ def driver(robot_name,robot_number):
 			goal = np.array([1+3*int(robot_name.replace('sphero','')),8])
 
 			if np.linalg.norm(goal-np.array([x,y]))<.3:
-				go_to(robot_name,x,y,-np.pi/2)
 				add_to_mode_counter(int(robot_name.replace('sphero','')))
 				print(robot_name+": Okay, ready to start the dance!")
 				wait_for_next_mode()
@@ -246,42 +208,37 @@ def driver(robot_name,robot_number):
 				pub_vel.publish(glide)
 				t_0 = time.time()
 			else:
-				(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+				[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
 
 		elif mode == 3:
 
 			# dance with partner and avoid others
 			if dance_state == -1:
-				r_dot = 0
-				theta_dot = 0
+				x_dot = 0
+				y_dot = 0
 			else:
 
 				if dance_state == 0:
 
-					try:
-						robot_locator = rospy.ServiceProxy('robot_locator', RobotLocator)
-						resp1 = robot_locator(follower_name)
-					except rospy.ServiceException, e:
-						print "Service call failed: %s"%e
-					their_pose = np.array([resp1.x,resp1.y])
-
-					# make sure to face your partner
-					direction = their_pose-np.array([x,y])
-					th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-					go_to(robot_name,x,y,th)
-
 					rate = rospy.Rate(.5) # hz
-					goal = np.array([x,y]) - 0.5*np.array([np.cos(theta),np.sin(theta)])
-					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+					
+					pointer = (their_pose - my_pose)/np.norm(their_pose-my_pose)
+					goal = my_pose - 0.5*pointer
+					[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
+
 				elif dance_state == 1:
-					goal = np.array([x,y]) + 0.5*np.array([np.cos(theta),np.sin(theta)])
-					(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
+					goal = my_pose + 0.5*pointer
+					[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
+
 				elif dance_state >= 2 and dance_state < 100:
 					rate = rospy.Rate(2) # hz
 					(r_dot,theta_dot) = (-.5*1.5,-.5)
+					x_dot = r_dot*np.cos(theta_dot)
+					y_dot = r_dot*np.sin(theta_dot)
+
 				else:
 					rate = rospy.Rate(750) # hz
-					print(robot_name+": Thank you for a lovely dance, "+follower_name+".")
+					print(robot_name+": Thank you for a lo[x_dot,y_dot]y dance, "+follower_name+".")
 					dance_end = String('bow')
 					pub_chat.publish(dance_end)
 					mode = 4
@@ -290,11 +247,9 @@ def driver(robot_name,robot_number):
 				dance_state = np.mod(dance_state + 1,16)
 
 		else: 
-			(r_dot,theta_dot) = navigate_toward([x,13],robot_name,follower_name)
+			[x_dot,y_dot] = navigate_toward([x,13],robot_name,follower_name)
 			return
 
-		x_dot = r_dot*np.cos(theta_dot)
-		y_dot = r_dot*np.sin(theta_dot)
 
 		lin = Vector3(x_dot,y_dot,0)
 		ang = Vector3(0,0,0)

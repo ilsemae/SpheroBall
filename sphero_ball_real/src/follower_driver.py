@@ -10,17 +10,9 @@ from geometry_msgs.msg import Vector3
 from nav_msgs.msg import Odometry
 from sphero_ball_real.srv import *
 
-x_init = 9999999
-y_init = 9999999
-#theta_init = 9999999
-
-x0 = 0
-y0 = 1
-#theta0 = 0
-
-x = 9999999
-y = 9999999
-#theta = 9999999
+[x,y] = [9999999,9999999]
+[x0,y0] = [0,1]
+[x_init,y_init] = [9999999,9999999]
 
 dance_begun = False
 
@@ -50,9 +42,8 @@ def odom_callback(data):
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-		theta_init = data.pose.pose.orientation.w
-	x = data.pose.pose.position.x - x_init + x0
-	y = data.pose.pose.position.y - y_init + y0
+	x = -(data.pose.pose.position.x - x_init) + x0
+	y = -(data.pose.pose.position.y - y_init) + y0
 	#theta = data.pose.pose.orientation.w - theta_init + theta0
 
 def add_to_mode_counter(i):
@@ -74,52 +65,29 @@ def wait_for_next_mode():
 	for i in range(1,rospy.get_param('total_robot_n')+1):
 		rospy.set_param('mode_checker_'+str(i),0)
 
-def go_to(robot_name,pose_x,pose_y,angle):
+def go_to(robot_name,pose_x,pose_y):
 
 	global x
 	global y
-	global theta
-
 	pub = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
 	rate = rospy.Rate(750) #hz
 
 	goal_pose = np.array([pose_x,pose_y])
 	current_pose = np.array([x,y])
 
-	direction = goal_pose-current_pose
-	goal_angle = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-	i = np.sign(goal_angle-theta)
-	if abs(goal_angle-theta) > np.pi:
-		i = -i
-	ang = Vector3(0,0,2*i)
-	lin = Vector3(0,0,0)
-	# if you are not at your goal x,y, spin until you are facing your goal:
-	while abs(goal_angle-theta)>.01 and np.linalg.norm(direction) > 0.1:
-		#print "spinning to face goal position"
-		stumble = Twist(lin,ang)
-		pub.publish(stumble)
-		rate.sleep()
+	displacement = goal_pose-current_pose
+	direction = displacement/np.linalg.norm(displacement)
+
 	ang = Vector3(0,0,0)
-	lin = Vector3(7,0,0)
-	# move toward your goal
-	while np.linalg.norm(goal_pose-current_pose) > 0.1 and np.linalg.norm(direction) > 0.1:
-		#print "moving toward goal position"
+	lin = Vector3(direction[0],direction[1],0)
+
+	while np.linalg.norm(displacement) > 0.02:
 		current_pose = np.array([x,y])
+		displacement = goal_pose-current_pose
 		stumble = Twist(lin,ang)
 		pub.publish(stumble)
 		rate.sleep()
-	goal_angle = float(np.mod(angle,2*np.pi))
-	i = np.sign(goal_angle-theta)
-	if abs(goal_angle-theta) > np.pi:
-		i = -i
-	ang = Vector3(0,0,2*i)
-	lin = Vector3(0,0,0)
-	# spin until you reach your given angle
-	while abs(theta-goal_angle)>.1:
-		#print "now spinning to desired theta"
-		stumble = Twist(lin,ang)
-		pub.publish(stumble)
-		rate.sleep()
+
 	ang = Vector3(0,0,0)
 	lin = Vector3(0,0,0)
 	stumble = Twist(lin,ang)
@@ -127,11 +95,9 @@ def go_to(robot_name,pose_x,pose_y,angle):
 	rate.sleep()
 
 def navigate_toward(goal,robot_name,leader_name):
-	global x
-	global y
-	global theta
-	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
+
 	rospy.wait_for_service('social_force')
+
 	try:
 		social_force = rospy.ServiceProxy('social_force', SocialForce)
 		resp2 = social_force(robot_name,goal[0],goal[1],leader_name)
@@ -139,55 +105,9 @@ def navigate_toward(goal,robot_name,leader_name):
 		print "Service call failed: %s"%e
 
 	net_force = np.array([resp2.x,resp2.y])
-	force_angle = np.arctan2(net_force[1],net_force[0])
-	#print(turtle_name+": Ok! My force angle is "+str(force_angle))
 
-	force_angle = np.mod(force_angle,2*np.pi) # bring angle value to within +2*pi
-	angle_difference = np.mod(force_angle - theta,2*np.pi)
-	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
-
-	speed_lin = 40
-	speed_ang = speed_lin/2
-
-	# if force angle points in front of robot, turn and move forward at the same time
-	if angle_difference < np.pi/2 :
-		if angle_difference < .1:
-			r_dot = speed_lin
-			theta_dot = 0
-		else:
-			r_dot = speed_lin
-			theta_dot = speed_ang
-	elif angle_difference > 3*np.pi/2: 
-		if angle_difference > 2*np.pi-.1:
-			r_dot = speed_lin
-			theta_dot = 0
-		else:
-			r_dot = speed_lin
-			theta_dot = -speed_ang
-	# otherwise, either back up if goal is close, or spin and then move toward goal
-	else:
-		i = 1
-		if abs(angle_difference) < np.pi:
-			i = -1
-		if distance_to_goal < 1.2:
-			if abs(angle_difference - np.pi) < .1:
-				r_dot = -speed_lin
-				theta_dot = 0
-			else:
-				r_dot = -speed_lin
-				theta_dot = i*speed_ang
-		else:
-			r_dot = 0
-			theta_dot = -5*i
-			lin = Vector3(r_dot,0,0)
-			ang = Vector3(0,0,theta_dot)
-			while abs(angle_difference)>.05:
-				#print(turtle_name+": Ok! My angle error is "+str(angle_difference)+", so I am spinning!")
-				angle_difference = force_angle-theta
-				stumble = Twist(lin,ang)
-				pub_vel.publish(stumble)
-			r_dot = speed_lin
-			theta_dot = 0
+	r_dot = 40
+	theta_dot = np.mod(np.arctan2(net_force[1],net_force[0]),2*np.pi)
 
 	return (r_dot,theta_dot)
 
@@ -209,7 +129,6 @@ def follow(robot_name,robot_number):
 	global mode
 	global x
 	global y
-	global theta
 	global smile
 
 	rate = rospy.Rate(750) # hz
@@ -221,7 +140,7 @@ def follow(robot_name,robot_number):
 	while x == 9999999:
 		time.sleep(.2)
 
-	pub_trans.publish(Vector3(-x_init+x0,-y_init+y0,0))		
+	pub_trans.publish(Vector3(x_init,y_init,0))		
 
 	print(robot_name+': ready to be asked to dance! I am at position: ('+str(x)+','+str(y)+").")
 	pub_vel = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
@@ -248,30 +167,27 @@ def follow(robot_name,robot_number):
 				print "Service call failed: %s"%e
 			their_pose = np.array([resp1.x,resp1.y])
 			direction = their_pose-np.array([x,y])
-			if np.linalg.norm(direction) < 3:
-				(r_dot,theta_dot) = smiler(robot_name,smile,np.array([x,y])+np.sign(smile)*direction/np.linalg.norm(direction),leader_name)
-				lin = Vector3(r_dot,0,0)
-				ang = Vector3(0,0,theta_dot)
-				glide = Twist(lin,ang)
-				pub_vel.publish(glide)
-				time.sleep(.5)
-				lin = Vector3(0,0,0)
-				ang = Vector3(0,0,0)
-				glide = Twist(lin,ang)
-				pub_vel.publish(glide)
-				if smile > 0:
-					go_to(robot_name,x,y,theta + np.pi/7)
-					go_to(robot_name,x,y,theta - np.pi/7)
-					go_to(robot_name,x,y,theta + np.pi/7)
-					go_to(robot_name,x,y,theta - np.pi/7)
-					go_to(robot_name,x,y,theta + np.pi/7)
-					time.sleep(1.5)
-				elif smile < 0:
-					go_to(robot_name,x,y,theta + np.pi/4)
-					time.sleep(4.5)
-				else:
-					time.sleep(3.5)
-				mode = 2
+			if np.linalg.norm(direction) < 1:
+				print "my leader is close!"
+				#(r_dot,theta_dot) = smiler(robot_name,smile,np.array([x,y])+np.sign(smile)*direction/np.linalg.norm(direction),leader_name)
+				#lin = Vector3(r_dot,0,0)
+				#ang = Vector3(0,0,theta_dot)
+				#glide = Twist(lin,ang)
+				#pub_vel.publish(glide)
+				#time.sleep(.5)
+				#lin = Vector3(0,0,0)
+				#ang = Vector3(0,0,0)
+				#glide = Twist(lin,ang)
+				#pub_vel.publish(glide)
+				#if smile > 0:
+				#	go_to(robot_name,x,y)
+				#	time.sleep(1.5)
+				#elif smile < 0:
+				#	go_to(robot_name,x,y)
+				#	time.sleep(4.5)
+				#else:
+				#	time.sleep(3.5)
+				#mode = 2
 
 		elif mode == 2:
 			# navigate to dance floor using force model
@@ -305,15 +221,13 @@ def follow(robot_name,robot_number):
 			# make sure to face your partner
 			direction = their_pose-np.array([x,y])
 			th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
-			if np.linalg.norm(th-theta) > 0.2:
-				go_to(robot_name,x,y,th)
 			# stay a certain distance in front of your partner
 			goal = their_pose - 1.5*direction/np.linalg.norm(direction)
 			if np.linalg.norm(goal-np.array([x,y])) < .3:
 				(r_dot,theta_dot) = (0,0)
 				if smile > 0 and dance_begun == False:
-					go_to(robot_name,x,y,theta + np.pi/7)
-					go_to(robot_name,x,y,theta - np.pi/7)
+					go_to(robot_name,x,y)
+					go_to(robot_name,x,y)
 			else:
 				dance_begun = True
 				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
@@ -334,7 +248,7 @@ def follow(robot_name,robot_number):
 if __name__ == '__main__':
 
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
-	x0 = baby_number
+	x0 = baby_number + 1
 	baby_name = 'sphero'+str(baby_number)
 	rospy.init_node(baby_name+'_driver', anonymous=True)
 
