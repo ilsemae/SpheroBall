@@ -154,6 +154,7 @@ def follow(robot_name,robot_number):
 				#else:
 				#	time.sleep(3.5)
 				if go_to_floor:
+					print robot_name + ": I'm off!"
 					mode = 2
 					time.sleep(1)
 
@@ -176,7 +177,6 @@ def follow(robot_name,robot_number):
 				add_to_mode_counter(int(robot_name.replace('sphero','')))
 				print robot_name + ": Okay! Waiting for everyone else to line up."
 				wait_for_next_mode()
-				print robot_name + ": moving on to next mode!"
 			else:
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
 

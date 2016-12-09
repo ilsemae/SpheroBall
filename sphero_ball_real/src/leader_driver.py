@@ -64,6 +64,8 @@ def wait_for_next_mode():
 
 def navigate_toward(goal,robot_name,follower_name):
 
+	global x,y
+
 	rospy.wait_for_service('social_force')
 
 	try:
@@ -73,9 +75,14 @@ def navigate_toward(goal,robot_name,follower_name):
 		print "Service call failed: %s"%e
 
 	net_force = np.array([resp2.x,resp2.y])
-
-	r_dot = .5
 	net_direction = net_force/np.linalg.norm(net_force)
+
+	# slow down when getting close
+	my_pose = np.array([x,y])
+	if np.linalg.norm(my_pose-goal) < 1:
+		r_dot = .25
+	else:
+		r_dot = .5
 
 	return r_dot*net_direction
 
@@ -197,7 +204,7 @@ def driver(robot_name,robot_number):
 
 					rate = rospy.Rate(.5) # hz
 					
-					pointer = (their_pose - my_pose)/np.norm(their_pose-my_pose)
+					pointer = (their_pose - my_pose)/np.linalg.norm(their_pose-my_pose)
 					goal = my_pose - 0.5*pointer
 					[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
 
