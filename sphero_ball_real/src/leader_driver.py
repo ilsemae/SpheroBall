@@ -29,8 +29,8 @@ def odom_callback(data):
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-	x = -(data.pose.pose.position.x - x_init) + x0
-	y = -(data.pose.pose.position.y - y_init) + y0
+	x = (data.pose.pose.position.x - x_init) + x0
+	y = (data.pose.pose.position.y - y_init) + y0
 
 # used to begin and end the dance
 def music_callback(data):
@@ -195,7 +195,7 @@ def driver(robot_name,robot_number):
 			rate = rospy.Rate(750) #hz
 
 			# navigate to dance floor using force model
-			goal = np.array([1+3*int(robot_name.replace('sphero','')),8])
+			goal = np.array([int(robot_name.replace('sphero','')),3.5])
 
 			if np.linalg.norm(goal-np.array([x,y]))<.3:
 				add_to_mode_counter(int(robot_name.replace('sphero','')))
@@ -247,8 +247,14 @@ def driver(robot_name,robot_number):
 				dance_state = np.mod(dance_state + 1,16)
 
 		else: 
-			[x_dot,y_dot] = navigate_toward([x,13],robot_name,follower_name)
-			return
+			goal = [x0,y0]
+			if np.linalg.norm(goal-np.array([x,y])) < .02:
+				(x_dot,y_dot) = (0,0)
+				print "Yay! That was fun."
+				#if smile > 0 and dance_begun == False:
+					#twist
+			else:
+				[x_dot,y_dot] = navigate_toward(goal,robot_name,'')
 
 
 		lin = Vector3(x_dot,y_dot,0)
@@ -263,7 +269,7 @@ if __name__ == '__main__':
 	baby_number = int(rospy.myargv(argv=sys.argv)[1])
 	baby_name = 'sphero'+str(baby_number)
 	rospy.init_node(baby_name+'_driver', anonymous=True)
-	x0 = baby_number+1
+	x0 = (baby_number+1)/2
 
 	if baby_number <= rospy.get_param('total_robot_n'):
 
