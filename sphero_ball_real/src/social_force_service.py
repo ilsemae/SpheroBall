@@ -36,8 +36,8 @@ class SocialForceServer:
 		# initial position of robots in our reference frame
 		x0 = (int(name.replace('sphero','')) + 1)/2
 		y0 = 3*(int(name.replace('sphero','')) % 2) + 1  # 1 for even spheros, 4 for odd
-		self.robot_poses[name][0] = (data.pose.pose.position.x - self.robot_transforms[name][0]) + x0
-		self.robot_poses[name][1] = (data.pose.pose.position.y - self.robot_transforms[name][1]) + y0
+		self.robot_poses[name][0] = -(data.pose.pose.position.x - self.robot_transforms[name][0]) + x0
+		self.robot_poses[name][1] = -(data.pose.pose.position.y - self.robot_transforms[name][1]) + y0
 
 	def transform_callback(self, data, name):
 		""" Used to set the pose for Sphero positions. """

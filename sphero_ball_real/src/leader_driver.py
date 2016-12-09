@@ -29,8 +29,8 @@ def odom_callback(data):
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-	x = (data.pose.pose.position.x - x_init) + x0
-	y = (data.pose.pose.position.y - y_init) + y0
+	x = -(data.pose.pose.position.x - x_init) + x0
+	y = -(data.pose.pose.position.y - y_init) + y0
 
 # used to begin and end the dance
 def music_callback(data):
@@ -61,35 +61,6 @@ def wait_for_next_mode():
 	rospy.set_param('mode',mode)
 	for i in range(1,rospy.get_param('total_robot_n')+1):
 		rospy.set_param('mode_checker_'+str(i),0)
-
-# used for setup - no social nav involved
-def go_to(robot_name,pose_x,pose_y):
-
-	global x, y
-	pub = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
-	rate = rospy.Rate(750) #hz
-
-	goal_pose = np.array([pose_x,pose_y])
-	current_pose = np.array([x,y])
-
-	displacement = goal_pose-current_pose
-	direction = displacement/np.linalg.norm(displacement)
-
-	ang = Vector3(0,0,0)
-	lin = Vector3(direction[0],direction[1],0)
-
-	while np.linalg.norm(displacement) > 0.02:
-		current_pose = np.array([x,y])
-		displacement = goal_pose-current_pose
-		stumble = Twist(lin,ang)
-		pub.publish(stumble)
-		rate.sleep()
-
-	ang = Vector3(0,0,0)
-	lin = Vector3(0,0,0)
-	stumble = Twist(lin,ang)
-	pub.publish(stumble)
-	rate.sleep()
 
 def navigate_toward(goal,robot_name,follower_name):
 
@@ -171,7 +142,7 @@ def driver(robot_name,robot_number):
 			their_pose = np.array([resp1.x,resp1.y])
 			goal = their_pose + np.array([0,.5])
 
-			if np.linalg.norm(goal-np.array([x,y])) < .02:
+			if np.linalg.norm(goal-np.array([x,y])) < .05:
 				print(robot_name+": Would you like to dance, "+follower_name+"?")
 				dance_proposal = String(robot_name)
 				pub_chat.publish(dance_proposal)
@@ -197,7 +168,7 @@ def driver(robot_name,robot_number):
 			# navigate to dance floor using force model
 			goal = np.array([int(robot_name.replace('sphero','')),3.5])
 
-			if np.linalg.norm(goal-np.array([x,y]))<.3:
+			if np.linalg.norm(goal-np.array([x,y]))<.05:
 				add_to_mode_counter(int(robot_name.replace('sphero','')))
 				print(robot_name+": Okay, ready to start the dance!")
 				wait_for_next_mode()
@@ -238,7 +209,7 @@ def driver(robot_name,robot_number):
 
 				else:
 					rate = rospy.Rate(750) # hz
-					print(robot_name+": Thank you for a lo[x_dot,y_dot]y dance, "+follower_name+".")
+					print(robot_name+": Thank you for a lovely dance, "+follower_name+".")
 					dance_end = String('bow')
 					pub_chat.publish(dance_end)
 					mode = 4
@@ -248,7 +219,7 @@ def driver(robot_name,robot_number):
 
 		else: 
 			goal = [x0,y0]
-			if np.linalg.norm(goal-np.array([x,y])) < .02:
+			if np.linalg.norm(goal-np.array([x,y])) < .05:
 				(x_dot,y_dot) = (0,0)
 				print "Yay! That was fun."
 				#if smile > 0 and dance_begun == False:

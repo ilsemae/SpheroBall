@@ -39,8 +39,8 @@ def odom_callback(data):
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-	x = (data.pose.pose.position.x - x_init) + x0
-	y = (data.pose.pose.position.y - y_init) + y0
+	x = -(data.pose.pose.position.x - x_init) + x0
+	y = -(data.pose.pose.position.y - y_init) + y0
 	#theta = data.pose.pose.orientation.w - theta_init + theta0
 
 def add_to_mode_counter(i):
@@ -61,33 +61,6 @@ def wait_for_next_mode():
 	rospy.set_param('mode',mode)
 	for i in range(1,rospy.get_param('total_robot_n')+1):
 		rospy.set_param('mode_checker_'+str(i),0)
-
-def go_to(robot_name,pose_x,pose_y):
-
-	global x, y
-	pub = rospy.Publisher(robot_name+'/cmd_vel', Twist, queue_size=10)
-	rate = rospy.Rate(750) #hz
-
-	goal_pose = np.array([pose_x,pose_y])
-	current_pose = np.array([x,y])
-
-	displacement = goal_pose-current_pose
-
-	while np.linalg.norm(displacement) > 0.02:
-		current_pose = np.array([x,y])
-		displacement = goal_pose-current_pose
-		direction = displacement/np.linalg.norm(displacement)
-		ang = Vector3(0,0,0)
-		lin = Vector3(direction[0],direction[1],0)
-		stumble = Twist(lin,ang)
-		pub.publish(stumble)
-		rate.sleep()
-
-	ang = Vector3(0,0,0)
-	lin = Vector3(0,0,0)
-	stumble = Twist(lin,ang)
-	pub.publish(stumble)
-	rate.sleep()
 
 def navigate_toward(goal,robot_name,leader_name):
 
@@ -162,7 +135,6 @@ def follow(robot_name,robot_number):
 			their_pose = np.array([resp1.x,resp1.y])
 			direction = their_pose-np.array([x,y])
 			if np.linalg.norm(direction) < 1:
-				print "my leader is close!"
 				#(r_dot,theta_dot) = smiler(robot_name,smile,np.array([x,y])+np.sign(smile)*direction/np.linalg.norm(direction),leader_name)
 				#lin = Vector3(r_dot,0,0)
 				#ang = Vector3(0,0,theta_dot)
@@ -195,7 +167,7 @@ def follow(robot_name,robot_number):
 			their_pose = np.array([resp1.x,resp1.y])
 			goal = their_pose + np.array([0,-.25])
 
-			if np.linalg.norm(goal-np.array([x,y])) < .02:
+			if np.linalg.norm(goal-np.array([x,y])) < .05:
 				lin = Vector3(0,0,0)
 				ang = Vector3(0,0,0)
 				glide = Twist(lin,ang)
@@ -228,7 +200,7 @@ def follow(robot_name,robot_number):
 
 			# stay a certain distance in front of your partner
 			goal = their_pose - .25*displacement/np.linalg.norm(displacement)
-			if np.linalg.norm(goal-np.array([x,y])) < .02:
+			if np.linalg.norm(goal-np.array([x,y])) < .05:
 				(x_dot,y_dot) = (0,0)
 				#if smile > 0 and dance_begun == False:
 					#twist
@@ -238,7 +210,7 @@ def follow(robot_name,robot_number):
 
 		else:
 			goal = [x0,y0]
-			if np.linalg.norm(goal-np.array([x,y])) < .02:
+			if np.linalg.norm(goal-np.array([x,y])) < .05:
 				(x_dot,y_dot) = (0,0)
 				print "Yay! That was fun."
 				#if smile > 0 and dance_begun == False:
