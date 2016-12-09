@@ -1,3 +1,6 @@
+Sphero Ball: Real Robots Version
+================================
+
 Before running the program, each of the *n* robots must be connected via Bluetooth and calibrated.
 
 To make the necessary services available, after running `roscore`, run
@@ -26,7 +29,7 @@ Now all of the robots need to have their headings set. To do this, first run
 
     rosservice call calibrate_spheros 1
 
-which will turn off the main LED on each robot and turn on the small heading LED in its place. Physically turn each robot so that its heading LED is facing in the positive x-direction. Once all the robots are calibrated, run
+which will turn off the main LED on each robot and turn on the small heading LED in its place. Physically turn each robot so that its heading LED is facing in the positive *x*-direction. Once all the robots are calibrated, run
 
     rosservice call calibrate_spheros 0
 
