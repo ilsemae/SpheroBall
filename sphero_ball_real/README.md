@@ -1,6 +1,6 @@
 Before running the program, each of the *n* robots must be connected via Bluetooth and calibrated.
 
-To make the necessary services available, run
+To make the necessary services available, after running `roscore`, run
 
     rosrun sphero_node_real robot_connector.py
 
@@ -8,19 +8,19 @@ and then open a new terminal window. Now for each robot, run
 
     rosservice call connect_sphero <i>
 
-where i is an integer from 1 to *n*. If the service returns false, try connecting again. If the service returns true but the robot's LED is green, you will need to disconnect and try again.
+where *i* is an integer from 1 to *n*. If the service returns false, try connecting again. If the service returns true but the robot's LED is green, you will need to disconnect and try again.
 
-To disconnect a robot from Bluetoth, run
+To disconnect a robot from Bluetooth, run
 
     rosservice call disconnect_sphero <i>
 
-where i is the same integer used to connect the robot.
+where *i* is the same integer used to connect the robot.
 
 Once all the robots are connected, make sure they are all publishing odometry information by running
 
     rostopic echo sphero<i>/odom
 
-for each robot i. If the echo produces no results, you will need to disconnect and reconnect that robot.
+for each robot *i*. If the echo produces no results, you will need to disconnect and reconnect that robot.
 
 Now all of the robots need to have their headings set. To do this, first run
 
