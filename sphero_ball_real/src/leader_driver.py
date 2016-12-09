@@ -79,8 +79,8 @@ def navigate_toward(goal,robot_name,follower_name):
 
 	# slow down when getting close
 	my_pose = np.array([x,y])
-	if np.linalg.norm(my_pose-goal) < 1:
-		r_dot = .25
+	if np.linalg.norm(my_pose-goal) < .9:
+		r_dot = .1
 	else:
 		r_dot = .5
 
@@ -117,6 +117,8 @@ def driver(robot_name,robot_number):
 	#print(robot_name+": Time for the next mode: "+str(mode))
 
 	while not rospy.is_shutdown():
+
+		my_pose = np.array([x,y])
 
 		t = time.time() # current time in seconds
 		

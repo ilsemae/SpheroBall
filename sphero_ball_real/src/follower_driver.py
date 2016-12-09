@@ -41,7 +41,13 @@ def odom_callback(data):
 		y_init = data.pose.pose.position.y
 	x = (data.pose.pose.position.x - x_init) + x0
 	y = -(data.pose.pose.position.y - y_init) + y0
-	#theta = data.pose.pose.orientation.w - theta_init + theta0
+
+# used to begin and end the dance
+def music_callback(data):
+
+	global dance_begun
+	if data.data == 'begin':
+		dance_begun = True
 
 def add_to_mode_counter(i):
 
@@ -79,8 +85,8 @@ def navigate_toward(goal,robot_name,follower_name):
 
 	# slow down when getting close
 	my_pose = np.array([x,y])
-	if np.linalg.norm(my_pose-goal) < 1:
-		r_dot = .25
+	if np.linalg.norm(my_pose-goal) < .9:
+		r_dot = .1
 	else:
 		r_dot = .5
 
@@ -106,6 +112,8 @@ def follow(robot_name,robot_number):
 	global smile, go_to_floor
 
 	rate = rospy.Rate(750) # hz
+
+	rospy.Subscriber('music', String, music_callback)
 	rospy.Subscriber(robot_name+'/chatter',String,chatter_callback)
 	rospy.Subscriber(robot_name+'/odom',Odometry,odom_callback)
 
@@ -124,6 +132,8 @@ def follow(robot_name,robot_number):
 
 	while not rospy.is_shutdown():
 
+		my_pose = np.array([x,y])
+
 		if mode == 0:
 			# wait
 			x_dot = 0
@@ -140,7 +150,7 @@ def follow(robot_name,robot_number):
 			except rospy.ServiceException, e:
 				print "Service call failed: %s"%e
 			their_pose = np.array([resp1.x,resp1.y])
-			direction = their_pose-np.array([x,y])
+			direction = their_pose-my_pose
 			if np.linalg.norm(direction) < 1:
 				#(r_dot,theta_dot) = smiler(robot_name,smile,np.array([x,y])+np.sign(smile)*direction/np.linalg.norm(direction),leader_name)
 				#lin = Vector3(r_dot,0,0)
@@ -163,7 +173,7 @@ def follow(robot_name,robot_number):
 				if go_to_floor:
 					print robot_name + ": I'm off!"
 					mode = 2
-					time.sleep(1)
+					time.sleep(2)
 
 		elif mode == 2:
 			# follow leader to dance floor using force model
@@ -176,8 +186,9 @@ def follow(robot_name,robot_number):
 			their_pose = np.array([resp1.x,resp1.y])
 			goal = their_pose + np.array([0,-.25])
 
-			if np.linalg.norm(goal-np.array([x,y])) < .05:
-				lin = Vector3(0,0,0)
+			if np.linalg.norm(goal-my_pose) < .05:
+				(x_dot,y_dot) = (0,0)
+				lin = Vector3(x_dot,y_dot,0)
 				ang = Vector3(0,0,0)
 				glide = Twist(lin,ang)
 				pub_vel.publish(glide)
@@ -187,10 +198,10 @@ def follow(robot_name,robot_number):
 			else:
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
 
-				if time.time() % 1 > .99:
+				if time.time() % 1 > .9:
 					print "-----------------------------------------------"
 					print "I am following my leader to the floor."
-					print "I am at " + str([x,y]) + "."
+					print "I am at " + str(my_pose) + "."
 					print "They are at " + str(their_pose) + "."
 					print "I'm going to " + str(goal) + "."
 					print "My velocity is " + str ([x_dot,y_dot]) + "."
@@ -206,22 +217,31 @@ def follow(robot_name,robot_number):
 				print "Service call failed: %s"%e
 			their_pose = np.array([resp1.x,resp1.y])
 
-			displacement = their_pose-np.array([x,y])
+			displacement = their_pose-my_pose
 
-			if dance_begun :
+			if dance_begun:
 				# stay a certain distance in front of your partner
 				goal = their_pose - .25*displacement/np.linalg.norm(displacement)
-				if np.linalg.norm(goal-np.array([x,y])) < .05:
+				if np.linalg.norm(goal-my_pose) < .05:
 					(x_dot,y_dot) = (0,0)
 					#if smile > 0 and dance_begun == False:
 						#twist
 				else:
-					dance_begun = True
 					[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
+					if time.time() % 1 > .9:
+						print "-----------------------------------------------"
+						print "I am following my leader to the floor."
+						print "I am at " + str(my_pose) + "."
+						print "They are at " + str(their_pose) + "."
+						print "I'm going to " + str(goal) + "."
+						print "My velocity is " + str ([x_dot,y_dot]) + "."
+			else:
+				x_dot = 0
+				y_dot = 0
 
 		else:
 			goal = [x0,y0]
-			if np.linalg.norm(goal-np.array([x,y])) < .05:
+			if np.linalg.norm(goal-my_pose) < .05:
 				(x_dot,y_dot) = (0,0)
 				print "Yay! That was fun."
 				#if smile > 0 and dance_begun == False:
@@ -260,5 +280,3 @@ if __name__ == '__main__':
 			rospy.spin() # not sure why I put this here. Perhaps it should go inside follow()
 		except rospy.ROSInterruptException:
 			pass
-
-		
