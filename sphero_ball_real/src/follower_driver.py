@@ -39,7 +39,7 @@ def odom_callback(data):
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-	x = -(data.pose.pose.position.x - x_init) + x0
+	x = (data.pose.pose.position.x - x_init) + x0
 	y = -(data.pose.pose.position.y - y_init) + y0
 	#theta = data.pose.pose.orientation.w - theta_init + theta0
 
@@ -74,7 +74,7 @@ def navigate_toward(goal,robot_name,leader_name):
 
 	net_force = np.array([resp2.x,resp2.y])
 
-	r_dot = 40
+	r_dot = .5
 	net_direction = net_force/np.linalg.norm(net_force)
 
 	return r_dot*net_direction
@@ -155,6 +155,7 @@ def follow(robot_name,robot_number):
 				#	time.sleep(3.5)
 				if go_to_floor:
 					mode = 2
+					time.sleep(1)
 
 		elif mode == 2:
 			# follow leader to dance floor using force model
@@ -175,12 +176,14 @@ def follow(robot_name,robot_number):
 				add_to_mode_counter(int(robot_name.replace('sphero','')))
 				print robot_name + ": Okay! Waiting for everyone else to line up."
 				wait_for_next_mode()
+				print robot_name + ": moving on to next mode!"
 			else:
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
 
 				if time.time() % 1 > .99:
 					print "-----------------------------------------------"
 					print "I am following my leader to the floor."
+					print "I am at " + str([x,y]) + "."
 					print "They are at " + str(their_pose) + "."
 					print "I'm going to " + str(goal) + "."
 					print "My velocity is " + str ([x_dot,y_dot]) + "."
@@ -198,15 +201,16 @@ def follow(robot_name,robot_number):
 
 			displacement = their_pose-np.array([x,y])
 
-			# stay a certain distance in front of your partner
-			goal = their_pose - .25*displacement/np.linalg.norm(displacement)
-			if np.linalg.norm(goal-np.array([x,y])) < .05:
-				(x_dot,y_dot) = (0,0)
-				#if smile > 0 and dance_begun == False:
-					#twist
-			else:
-				dance_begun = True
-				[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
+			if dance_begun :
+				# stay a certain distance in front of your partner
+				goal = their_pose - .25*displacement/np.linalg.norm(displacement)
+				if np.linalg.norm(goal-np.array([x,y])) < .05:
+					(x_dot,y_dot) = (0,0)
+					#if smile > 0 and dance_begun == False:
+						#twist
+				else:
+					dance_begun = True
+					[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
 
 		else:
 			goal = [x0,y0]

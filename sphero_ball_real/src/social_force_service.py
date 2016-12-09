@@ -36,7 +36,7 @@ class SocialForceServer:
 		# initial position of robots in our reference frame
 		x0 = (int(name.replace('sphero','')) + 1)/2
 		y0 = 3*(int(name.replace('sphero','')) % 2) + 1  # 1 for even spheros, 4 for odd
-		self.robot_poses[name][0] = -(data.pose.pose.position.x - self.robot_transforms[name][0]) + x0
+		self.robot_poses[name][0] = (data.pose.pose.position.x - self.robot_transforms[name][0]) + x0
 		self.robot_poses[name][1] = -(data.pose.pose.position.y - self.robot_transforms[name][1]) + y0
 
 	def transform_callback(self, data, name):
@@ -47,8 +47,8 @@ class SocialForceServer:
 	def get_net_force(self, robot_name, partner_name, goal_x, goal_y):
 		""" Computes the net social force exerted on a robot. """
 		pos = np.array(self.robot_poses[robot_name])
-		goal_coefficient = (self.n-1)*25 # proportional to the total no. of robots
-		net_force = np.array([0,0])
+		goal_coefficient = float((self.n-1)*25) # proportional to the total no. of robots
+		net_force = np.array([0.0,0.0])
 		# Factor the social force of each robot into the net force.
 		for i in range(self.n):
 			stranger = 'sphero'+str(i+1)
@@ -62,11 +62,13 @@ class SocialForceServer:
 				stranger_dist = np.linalg.norm(stranger_vec)
 				stranger_force = 3 * self.n/stranger_dist * stranger_vec/stranger_dist
 				net_force -= stranger_force
+				print "force from " + stranger + " equals " + str(net_force)
 		# Add the social force of the goal.
 		vect_to_goal = [goal_x, goal_y] - pos
 		dist_to_goal = np.linalg.norm(vect_to_goal)
 		goal_vect = 1/dist_to_goal * vect_to_goal/dist_to_goal
 		net_force += goal_coefficient * goal_vect
+		#print pos, vect_to_goal, goal_vect, net_force
 		# Return the net force vector.
 		return net_force
 

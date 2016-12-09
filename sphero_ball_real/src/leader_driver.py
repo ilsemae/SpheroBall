@@ -29,7 +29,7 @@ def odom_callback(data):
 	if x_init == 9999999:
 		x_init = data.pose.pose.position.x
 		y_init = data.pose.pose.position.y
-	x = -(data.pose.pose.position.x - x_init) + x0
+	x = (data.pose.pose.position.x - x_init) + x0
 	y = -(data.pose.pose.position.y - y_init) + y0
 
 # used to begin and end the dance
@@ -74,7 +74,7 @@ def navigate_toward(goal,robot_name,follower_name):
 
 	net_force = np.array([resp2.x,resp2.y])
 
-	r_dot = 40
+	r_dot = .5
 	net_direction = net_force/np.linalg.norm(net_force)
 
 	return r_dot*net_direction
@@ -150,23 +150,23 @@ def driver(robot_name,robot_number):
 				y_dot = 0
 				mode = mode+1
 				#print(robot_name+": Time for the next mode: "+str(mode))
-				rate = rospy.Rate(.5) #hz
+				rate = rospy.Rate(1) #hz
 			else:
 				# navigate to partner using force model
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
 
-			if time.time() % 1 > .99:
-				print "-----------------------------------------------"
-				print "I am at " + str([x,y]) + "."
-				print "They are at " + str(their_pose) + "."
-				print "I'm going to " + str(goal) + "."
-				print "My velocity is " + str ([x_dot,y_dot]) + "."
+				if time.time() % 1 > .99:
+					print "-----------------------------------------------"
+					print "I am at " + str([x,y]) + "."
+					print "They are at " + str(their_pose) + "."
+					print "I'm going to " + str(goal) + "."
+					print "My velocity is " + str ([x_dot,y_dot]) + "."
 
 		elif mode == 2:
 			rate = rospy.Rate(750) #hz
 
 			# navigate to dance floor using force model
-			goal = np.array([int(robot_name.replace('sphero','')),3.5])
+			goal = np.array([int(robot_name.replace('sphero','')),3])
 
 			if np.linalg.norm(goal-np.array([x,y]))<.05:
 				add_to_mode_counter(int(robot_name.replace('sphero','')))
@@ -180,6 +180,10 @@ def driver(robot_name,robot_number):
 				t_0 = time.time()
 			else:
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
+				if time.time() % 1 > .999:
+					print "-----------------------------------------------"
+					print "I am at " + str([x,y]) + "."
+					print "I'm going to " + str(goal) + "."
 
 		elif mode == 3:
 
