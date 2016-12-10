@@ -313,7 +313,11 @@ def driver(robot_name,robot_number):
 				dance_state = np.mod(dance_state + 1,16)
 
 		else: 
-			(r_dot,theta_dot) = navigate_toward([x,13],robot_name,follower_name)
+			goal = [x,13]
+			if np.linalg.norm(goal-np.array([x,y])) < .3:
+				(r_dot,theta_dot) = (0,0)
+			else:
+				(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
 
 		lin = Vector3(r_dot,0,0)
 		ang = Vector3(0,0,theta_dot)

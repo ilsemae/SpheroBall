@@ -305,7 +305,11 @@ def follow(robot_name,robot_number):
 				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 		else:
-			(r_dot,theta_dot) = navigate_toward([x,1],robot_name,leader_name)
+			goal = [x,1]
+			if np.linalg.norm(goal-np.array([x,y])) < .3:
+				(r_dot,theta_dot) = (0,0)
+			else:
+				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
 
 		lin = Vector3(r_dot,0,0)
 		ang = Vector3(0,0,theta_dot)
