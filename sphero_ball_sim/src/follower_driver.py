@@ -129,6 +129,9 @@ def navigate_toward(goal,robot_name,leader_name):
 	angle_difference = np.mod(force_angle - theta,2*np.pi)
 	distance_to_goal = np.linalg.norm(goal-np.array([x,y]))
 
+	if distance_to_goal < .1 :
+		return (0,0)
+
 	speed_lin = 2
 	speed_ang = speed_lin/2
 
@@ -201,7 +204,7 @@ def follow(robot_name,robot_number):
 
 	rospy.Subscriber(robot_name+'/pose',Pose,pose_callback)
 	p_x = robot_number/1.5+7
-	p_y = 1
+	p_y = 2
 	th = np.pi/2
 
 	while x==0: # wait for published messages to start being read
@@ -235,6 +238,8 @@ def follow(robot_name,robot_number):
 			their_pose = np.array([resp1.x,resp1.y])
 			direction = their_pose-np.array([x,y])
 			if np.linalg.norm(direction) < 3:
+				print p_x,p_y
+				print x, y
 				(r_dot,theta_dot) = smiler(robot_name,smile,np.array([x,y])+np.sign(smile)*direction/np.linalg.norm(direction),leader_name)
 				lin = Vector3(r_dot,0,0)
 				ang = Vector3(0,0,theta_dot)
@@ -253,8 +258,8 @@ def follow(robot_name,robot_number):
 					go_to(robot_name,x,y,theta + np.pi/7)
 					time.sleep(1.5)
 				elif smile < 0:
-					go_to(robot_name,x,y,theta + np.pi/4)
-					time.sleep(4.5)
+					#go_to(robot_name,x,y,theta + np.pi/4)
+					time.sleep(3.5)
 				else:
 					time.sleep(3.5)
 				mode = 2
@@ -288,6 +293,7 @@ def follow(robot_name,robot_number):
 			except rospy.ServiceException, e:
 				print "Service call failed: %s"%e
 			their_pose = np.array([resp1.x,resp1.y])
+			their_angle = resp1.theta
 			# make sure to face your partner
 			direction = their_pose-np.array([x,y])
 			th = np.mod(np.arctan2(direction[1],direction[0]),2*np.pi)
@@ -297,9 +303,10 @@ def follow(robot_name,robot_number):
 			goal = their_pose - 1.5*direction/np.linalg.norm(direction)
 			if np.linalg.norm(goal-np.array([x,y])) < .3:
 				(r_dot,theta_dot) = (0,0)
-				if smile > 0 and dance_begun == False:
-					go_to(robot_name,x,y,theta + np.pi/7)
-					go_to(robot_name,x,y,theta - np.pi/7)
+				if dance_begun == False:
+					if smile > 0:
+						go_to(robot_name,x,y,theta + np.pi/7)
+						go_to(robot_name,x,y,theta - np.pi/7)
 			else:
 				dance_begun = True
 				(r_dot,theta_dot) = navigate_toward(goal,robot_name,leader_name)
@@ -324,9 +331,9 @@ if __name__ == '__main__':
 	baby_name = 'sphero'+str(baby_number)
 	if baby_number <= rospy.get_param('total_robot_n'):
 		# defines how happy a robot is about dancing. All but sphero2 will be neutral (0)
-		# sphero2's value will be varied for our experment. -5 = very unhappy, 5 = very happy
+		# sphero2's value will be varied for our experment. -1 = unhappy, 1 = happy
 		if baby_name == 'sphero2':
-			smile = 5
+			smile = 0
 		else:
 			smile = 0
 

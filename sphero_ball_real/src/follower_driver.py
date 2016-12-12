@@ -16,6 +16,7 @@ from sphero_ball_real.srv import *
 
 go_to_floor = False
 dance_begun = False
+dance_state = -1
 
 mode = -1 # 0 = waiting to be asked, 1 = waiting to be asked, 2 = following leader to dancefloor, 3 = dancing with partner
 
@@ -23,9 +24,18 @@ mode = -1 # 0 = waiting to be asked, 1 = waiting to be asked, 2 = following lead
 def chatter_callback(data):
 	global mode
 	global go_to_floor
+	global dance_state
+	global dance_begun
+
 	if data.data == "bow":
 		print "Thank you as well!"
+		dance_begun = False
+		time.sleep(2)
 		mode = 4
+	elif data.data == 'cw':
+		dance_state = 100
+	elif data.data == 'ccw':
+		dance_state = 300
 	else:
 		print "That would be lovely, "+data.data+"!"
 		go_to_floor = True
@@ -71,6 +81,7 @@ def wait_for_next_mode():
 def navigate_toward(goal,robot_name,follower_name):
 
 	global x,y
+	global dance_begun
 
 	rospy.wait_for_service('social_force')
 
@@ -85,10 +96,12 @@ def navigate_toward(goal,robot_name,follower_name):
 
 	# slow down when getting close
 	my_pose = np.array([x,y])
-	if np.linalg.norm(my_pose-goal) < .9:
+	if np.linalg.norm(my_pose-goal) < .5 and not dance_begun:
 		r_dot = .1
+	elif np.linalg.norm(my_pose-goal) < .5 and dance_begun:
+		r_dot = .2
 	else:
-		r_dot = .5
+		r_dot = .35
 
 	return r_dot*net_direction
 
@@ -130,9 +143,11 @@ def follow(robot_name,robot_number):
 	wait_for_next_mode()
 	#print(robot_name+": Time for the next mode: "+str(mode))
 
+	t0 = time.time()
 	while not rospy.is_shutdown():
 
 		my_pose = np.array([x,y])
+		t = time.time()
 
 		if mode == 0:
 			# wait
@@ -199,12 +214,7 @@ def follow(robot_name,robot_number):
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
 
 				if time.time() % 1 > .9:
-					print "-----------------------------------------------"
-					print "I am following my leader to the floor."
-					print "I am at " + str(my_pose) + "."
-					print "They are at " + str(their_pose) + "."
-					print "I'm going to " + str(goal) + "."
-					print "My velocity is " + str ([x_dot,y_dot]) + "."
+					print "I am following my leader to the floor. I am: " + str(my_pose) + ". They are: " + str(their_pose) + ". My goal: " + str(goal) + ". My vel: " + str ([round(x_dot,2),round(y_dot,2)]) + "./n"
 
 		elif mode == 3:
 
@@ -216,25 +226,15 @@ def follow(robot_name,robot_number):
 			except rospy.ServiceException, e:
 				print "Service call failed: %s"%e
 			their_pose = np.array([resp1.x,resp1.y])
-
 			displacement = their_pose-my_pose
 
 			if dance_begun:
 				# stay a certain distance in front of your partner
-				goal = their_pose - .25*displacement/np.linalg.norm(displacement)
-				if np.linalg.norm(goal-my_pose) < .05:
-					(x_dot,y_dot) = (0,0)
-					#if smile > 0 and dance_begun == False:
-						#twist
-				else:
-					[x_dot,y_dot] = navigate_toward(goal,robot_name,leader_name)
-					if time.time() % 1 > .9:
-						print "-----------------------------------------------"
-						print "I am following my leader to the floor."
-						print "I am at " + str(my_pose) + "."
-						print "They are at " + str(their_pose) + "."
-						print "I'm going to " + str(goal) + "."
-						print "My velocity is " + str ([x_dot,y_dot]) + "."
+				r = .3
+				x_dot = r*np.cos(-2*(t-t0))
+				y_dot = r*np.sin(-2*(t-t0))
+				print "Spin! [", round(x_dot,2), ",", round(y_dot,2) ,"]"
+
 			else:
 				x_dot = 0
 				y_dot = 0
@@ -243,7 +243,8 @@ def follow(robot_name,robot_number):
 			goal = [x0,y0]
 			if np.linalg.norm(goal-my_pose) < .05:
 				(x_dot,y_dot) = (0,0)
-				print "Yay! That was fun."
+				print robot_name+": Yay! That was fun."
+				return
 				#if smile > 0 and dance_begun == False:
 					#twist
 			else:

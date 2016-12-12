@@ -24,14 +24,14 @@
 
 	<!-- leaders all have odd args -->
 	<node pkg="sphero_ball_real" name="sphero1_driver" type="leader_driver.py" output="screen" args="1" />
-	<node pkg="sphero_ball_real" name="sphero3_driver" type="leader_driver.py" output="screen" args="3" />
+	<!--<node pkg="sphero_ball_real" name="sphero3_driver" type="leader_driver.py" output="screen" args="3" />
 	<node pkg="sphero_ball_real" name="sphero5_driver" type="leader_driver.py" output="screen" args="5" />
-	<node pkg="sphero_ball_real" name="sphero7_driver" type="leader_driver.py" output="screen" args="7" />
+	<node pkg="sphero_ball_real" name="sphero7_driver" type="leader_driver.py" output="screen" args="7" />-->
 
 	<!-- followers all have even args -->
 	<node pkg="sphero_ball_real" name="sphero2_driver" type="follower_driver.py" output="screen" args="2" />
-	<node pkg="sphero_ball_real" name="sphero4_driver" type="follower_driver.py" output="screen" args="4" />
+	<!--<node pkg="sphero_ball_real" name="sphero4_driver" type="follower_driver.py" output="screen" args="4" />
 	<node pkg="sphero_ball_real" name="sphero6_driver" type="follower_driver.py" output="screen" args="6" />
-	<node pkg="sphero_ball_real" name="sphero8_driver" type="follower_driver.py" output="screen" args="8" />
+	<node pkg="sphero_ball_real" name="sphero8_driver" type="follower_driver.py" output="screen" args="8" />-->
 
 </launch>

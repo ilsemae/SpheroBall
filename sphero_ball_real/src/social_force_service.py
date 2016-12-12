@@ -62,7 +62,7 @@ class SocialForceServer:
 				stranger_dist = np.linalg.norm(stranger_vec)
 				stranger_force = 3 * self.n/stranger_dist * stranger_vec/stranger_dist
 				net_force -= stranger_force
-				print "force from " + stranger + " equals " + str(net_force)
+				#print robot_name,": force from " + stranger + " equals " + str(stranger_force)
 		# Add the social force of the goal.
 		vect_to_goal = [goal_x, goal_y] - pos
 		dist_to_goal = np.linalg.norm(vect_to_goal)

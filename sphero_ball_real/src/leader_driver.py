@@ -79,10 +79,10 @@ def navigate_toward(goal,robot_name,follower_name):
 
 	# slow down when getting close
 	my_pose = np.array([x,y])
-	if np.linalg.norm(my_pose-goal) < .9:
+	if np.linalg.norm(my_pose-goal) < .5:
 		r_dot = .1
 	else:
-		r_dot = .5
+		r_dot = .35
 
 	return r_dot*net_direction
 
@@ -116,6 +116,7 @@ def driver(robot_name,robot_number):
 	wait_for_next_mode()
 	#print(robot_name+": Time for the next mode: "+str(mode))
 
+	t0 = time.time()
 	while not rospy.is_shutdown():
 
 		my_pose = np.array([x,y])
@@ -128,11 +129,9 @@ def driver(robot_name,robot_number):
 			y_dot = 0
 
 			# stall until you build up the courage to ask someone to dance
-			# randomly decide when this leader will go find a partner
-			a = np.random.randint(0,8000)
-			if a == 7:
-				mode = 1
-				print(robot_name+": Okay, I'm feeling brave!")
+			time.sleep(2)
+			print(robot_name+": Okay, I'm feeling brave!")
+			mode = 1
 
 		# go ask a follower to dance
 		elif mode == 1:
@@ -152,36 +151,36 @@ def driver(robot_name,robot_number):
 			goal = their_pose + np.array([0,.5])
 
 			if np.linalg.norm(goal-np.array([x,y])) < .05:
+				x_dot = 0
+				y_dot = 0
+				lin = Vector3(x_dot,y_dot,0)
+				ang = Vector3(0,0,0)
+				glide = Twist(lin,ang)
+				pub_vel.publish(glide)
+				rate.sleep()
+				time.sleep(1)
 				print(robot_name+": Would you like to dance, "+follower_name+"?")
 				dance_proposal = String(robot_name)
 				pub_chat.publish(dance_proposal)
-				x_dot = 0
-				y_dot = 0
 				mode = mode+1
 				#print(robot_name+": Time for the next mode: "+str(mode))
 				rate = rospy.Rate(1) #hz
 			else:
 				# navigate to partner using force model
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
-
-				if time.time() % 1 > .99:
-					print "-----------------------------------------------"
-					print "I am at " + str([x,y]) + "."
-					print "They are at " + str(their_pose) + "."
-					print "I'm going to " + str(goal) + "."
-					print "My velocity is " + str ([x_dot,y_dot]) + "."
+				if time.time() % 1 > .9:
+					print "Gonna go get a partner! Me: " + str([round(x,2),round(y,2)]) + ". Them: " + str(their_pose) + ". Goal: " + str(goal) + ". My vel: " + str ([x_dot,y_dot]) + "."
 
 		elif mode == 2:
 			rate = rospy.Rate(750) #hz
 
 			# navigate to dance floor using force model
-			goal = np.array([int(robot_name.replace('sphero','')),3])
+			goal = np.array([float(robot_name.replace('sphero','')),2.5])
 
 			if np.linalg.norm(goal-np.array([x,y]))<.05:
 				add_to_mode_counter(int(robot_name.replace('sphero','')))
 				print(robot_name+": Okay, ready to start the dance!")
 				wait_for_next_mode()
-				#print(robot_name+": Time for the next mode: "+str(mode))
 				lin = Vector3(0,0,0)
 				ang = Vector3(0,0,0)
 				glide = Twist(lin,ang)
@@ -189,10 +188,8 @@ def driver(robot_name,robot_number):
 				t_0 = time.time()
 			else:
 				[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
-				if time.time() % 1 > .999:
-					print "-----------------------------------------------"
-					print "I am at " + str([x,y]) + "."
-					print "I'm going to " + str(goal) + "."
+				if time.time() % 1 > .9:
+					print "I am leading my partner to the floor. I am: " + str(my_pose) + ". My goal: " + str(goal) + ". My vel: " + str ([round(x_dot,2),round(y_dot,2)]) + "./n"
 
 		elif mode == 3:
 
@@ -200,41 +197,41 @@ def driver(robot_name,robot_number):
 			if dance_state == -1:
 				x_dot = 0
 				y_dot = 0
+
 			else:
+				
+				pointer = (their_pose - my_pose)/np.linalg.norm(their_pose-my_pose)
+				rate = rospy.Rate(50) # hz
 
-				if dance_state == 0:
-
-					rate = rospy.Rate(.5) # hz
-					
-					pointer = (their_pose - my_pose)/np.linalg.norm(their_pose-my_pose)
-					goal = my_pose - 0.5*pointer
-					[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
-
-				elif dance_state == 1:
-					goal = my_pose + 0.5*pointer
-					[x_dot,y_dot] = navigate_toward(goal,robot_name,follower_name)
-
-				elif dance_state >= 2 and dance_state < 100:
-					rate = rospy.Rate(2) # hz
-					(r_dot,theta_dot) = (-.5*1.5,-.5)
-					x_dot = r_dot*np.cos(theta_dot)
-					y_dot = r_dot*np.sin(theta_dot)
+				if dance_state < 400:
+					r = .3
+					x_dot = r*np.cos(-2*(t-t0))
+					y_dot = r*np.sin(-2*(t-t0))
+					print "Spin! [", round(x_dot,2), ",", round(y_dot,2) ,"]"
+					dance_end = String('cw')
+					pub_chat.publish(dance_end)
 
 				else:
 					rate = rospy.Rate(750) # hz
 					print(robot_name+": Thank you for a lovely dance, "+follower_name+".")
 					dance_end = String('bow')
 					pub_chat.publish(dance_end)
-					mode = 4
+					x_dot = 0
+					y_dot = 0
+					lin = Vector3(x_dot,y_dot,0)
+					ang = Vector3(0,0,0)
 
-				#(r_dot,theta_dot) = navigate_toward(goal,robot_name,follower_name)
-				dance_state = np.mod(dance_state + 1,16)
+					glide = Twist(lin,ang)
+					pub_vel.publish(glide)
+					time.sleep(2)
+					mode = 4
 
 		else: 
 			goal = [x0,y0]
 			if np.linalg.norm(goal-np.array([x,y])) < .05:
 				(x_dot,y_dot) = (0,0)
-				print "Yay! That was fun."
+				print robot_name+": Yay! That was fun."
+				return
 				#if smile > 0 and dance_begun == False:
 					#twist
 			else:
