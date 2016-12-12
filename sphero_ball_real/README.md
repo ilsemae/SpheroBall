@@ -5,7 +5,7 @@ Before running the program, each of the *n* robots must be connected via Bluetoo
 
 To make the necessary services available, after running `roscore`, run
 
-    rosrun sphero_node_real robot_connector.py
+    rosrun sphero_ball_real robot_connector.py
 
 and then open a new terminal window. Now for each robot, run
 
